@@ -1,0 +1,363 @@
+/* ===================================
+   ThesisConnect - Student Registration
+====================================== */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Inter',sans-serif;
+}
+
+body{
+
+    background:#f4f7fc;
+
+    min-height:100vh;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    padding:50px 20px;
+
+}
+
+/* ========================= */
+
+.container{
+
+    width:100%;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+}
+
+/* ========================= */
+
+.register-card{
+
+    width:900px;
+
+    background:#fff;
+
+    border-radius:18px;
+
+    padding:45px;
+
+    box-shadow:
+        0 10px 40px rgba(0,0,0,.08);
+
+}
+
+/* ========================= */
+
+.logo{
+
+    width:75px;
+
+    height:75px;
+
+    background:#2563eb;
+
+    color:#fff;
+
+    border-radius:50%;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    margin:auto;
+
+    font-size:28px;
+
+}
+
+.register-card h2{
+
+    text-align:center;
+
+    margin-top:20px;
+
+    color:#222;
+
+    font-size:32px;
+
+}
+
+.subtitle{
+
+    text-align:center;
+
+    color:#777;
+
+    margin-top:10px;
+
+    margin-bottom:35px;
+
+    font-size:15px;
+
+}
+
+/* ========================= */
+
+.grid{
+
+    display:grid;
+
+    grid-template-columns:repeat(2,1fr);
+
+    gap:20px;
+
+}
+
+/* ========================= */
+
+.input-box{
+
+    margin-bottom:22px;
+
+}
+
+.input-box label{
+
+    display:block;
+
+    margin-bottom:8px;
+
+    font-size:14px;
+
+    font-weight:600;
+
+    color:#444;
+
+}
+
+.input-box input,
+.input-box select,
+.input-box textarea{
+
+    width:100%;
+
+    height:52px;
+
+    padding:0 15px;
+
+    border:1px solid #d8dce6;
+
+    border-radius:10px;
+
+    background:#fafbfc;
+
+    font-size:15px;
+
+    transition:.3s;
+
+    outline:none;
+
+}
+
+textarea{
+
+    height:120px !important;
+
+    padding:15px !important;
+
+    resize:vertical;
+
+}
+
+/* ========================= */
+
+.input-box input:focus,
+.input-box select:focus,
+.input-box textarea:focus{
+
+    border-color:#2563eb;
+
+    background:#fff;
+
+    box-shadow:0 0 0 4px rgba(37,99,235,.12);
+
+}
+
+/* ========================= */
+
+.error-message{
+
+    display:block;
+
+    margin-top:10px;
+
+    color:#dc2626;
+
+    font-size:13px;
+
+}
+
+.input-error{
+
+    border-color:#dc2626 !important;
+
+    background:#fff5f5;
+
+}
+
+input[type=file]{
+
+    padding:12px;
+
+    background:#fff;
+
+}
+
+/* ========================= */
+
+.terms{
+
+    margin:25px 0;
+
+}
+
+.terms label{
+
+    display:flex;
+
+    align-items:center;
+
+    gap:10px;
+
+    font-size:15px;
+
+    color:#555;
+
+    cursor:pointer;
+
+}
+
+.terms input{
+
+    width:18px;
+
+    height:18px;
+
+}
+
+/* ========================= */
+
+button{
+
+    width:100%;
+
+    height:55px;
+
+    border:none;
+
+    border-radius:10px;
+
+    background:#2563eb;
+
+    color:#fff;
+
+    font-size:16px;
+
+    font-weight:600;
+
+    cursor:pointer;
+
+    transition:.3s;
+
+}
+
+button:hover{
+
+    background:#1d4ed8;
+
+    transform:translateY(-2px);
+
+}
+
+/* ========================= */
+
+.bottom-link{
+
+    margin-top:25px;
+
+    text-align:center;
+
+    color:#666;
+
+}
+
+.bottom-link a{
+
+    color:#2563eb;
+
+    text-decoration:none;
+
+    font-weight:600;
+
+}
+
+.bottom-link a:hover{
+
+    text-decoration:underline;
+
+}
+
+/* ========================= */
+
+#registerMessage{
+
+    margin-bottom:20px;
+
+}
+
+/* ========================= */
+
+::placeholder{
+
+    color:#999;
+
+}
+
+/* ========================= */
+
+@media(max-width:768px){
+
+.register-card{
+
+    width:100%;
+
+    padding:30px;
+
+}
+
+.grid{
+
+    grid-template-columns:1fr;
+
+}
+
+.register-card h2{
+
+    font-size:26px;
+
+}
+
+.subtitle{
+
+    font-size:14px;
+
+}
+
+}

@@ -1,0 +1,607 @@
+/* ===========================
+   ThesisConnect Login Page
+   =========================== */
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Inter',sans-serif;
+}
+
+body{
+
+    background:#eef2ff;
+
+    height:100vh;
+
+    overflow:hidden;
+
+}
+
+html{
+
+    height:100%;
+
+}
+
+/* ===========================
+   Main Container
+   =========================== */
+
+.container{
+
+    display:flex;
+
+    width:100%;
+
+    height:100vh;
+
+    height:100dvh;
+
+    align-items:center;
+
+}
+
+/* ===========================
+   Left Panel
+   =========================== */
+
+.left-panel{
+
+    width:50%;
+
+    min-height:100%;
+
+    background:linear-gradient(135deg,#2563eb,#4f46e5);
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    position:relative;
+
+    overflow:hidden;
+
+}
+
+.left-panel::before{
+
+    content:"";
+
+    width:450px;
+
+    height:450px;
+
+    border-radius:50%;
+
+    position:absolute;
+
+    background:rgba(255,255,255,.08);
+
+    top:-100px;
+
+    right:-100px;
+
+}
+
+.left-panel::after{
+
+    content:"";
+
+    width:350px;
+
+    height:350px;
+
+    border-radius:50%;
+
+    position:absolute;
+
+    background:rgba(255,255,255,.06);
+
+    bottom:-120px;
+
+    left:-80px;
+
+}
+
+.overlay{
+
+    width:min(70%,520px);
+
+    color:white;
+
+    position:relative;
+
+    z-index:2;
+
+}
+
+.overlay h1{
+
+    font-size:clamp(40px,5vw,55px);
+
+    font-weight:700;
+
+    margin-bottom:20px;
+
+}
+
+.overlay p{
+
+    font-size:clamp(16px,1.5vw,18px);
+
+    line-height:1.8;
+
+    opacity:.95;
+
+}
+
+/* ===========================
+   Right Panel
+   =========================== */
+
+.right-panel{
+
+    width:50%;
+
+    min-height:100%;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    background:#f8fafc;
+
+    padding:16px;
+
+}
+
+/* ===========================
+   Login Box
+   =========================== */
+
+.login-box{
+
+    width:100%;
+
+    max-width:430px;
+
+    background:white;
+
+    max-height:calc(100dvh - 32px);
+
+    padding:clamp(20px,4vh,32px) 32px;
+
+    border-radius:22px;
+
+    box-shadow:0 20px 45px rgba(0,0,0,.08);
+
+}
+
+.logo{
+
+    width:clamp(52px,8vh,64px);
+
+    height:clamp(52px,8vh,64px);
+
+    background:#2563eb;
+
+    color:white;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    border-radius:50%;
+
+    font-size:clamp(24px,4vh,28px);
+
+    margin:0 auto clamp(14px,2.5vh,20px);
+
+}
+
+.login-box h2{
+
+    text-align:center;
+
+    font-size:clamp(24px,4vh,30px);
+
+    color:#222;
+
+}
+
+.login-box span{
+
+    display:block;
+
+    text-align:center;
+
+    color:#777;
+
+    margin-top:8px;
+
+    margin-bottom:clamp(18px,4vh,28px);
+
+}
+
+/* ===========================
+   Input
+   =========================== */
+
+.input-box{
+
+    margin-bottom:clamp(14px,2.5vh,20px);
+
+}
+
+.input-box label{
+
+    display:block;
+
+    margin-bottom:8px;
+
+    font-weight:600;
+
+    color:#444;
+
+}
+
+    .login-error{
+
+        margin-bottom:18px;
+
+        color:#b91c1c;
+
+        background:#fee2e2;
+
+        border:1px solid #fecaca;
+
+        border-radius:10px;
+
+        padding:12px 14px;
+
+        font-size:14px;
+
+    }
+
+.input-field{
+
+    width:100%;
+
+    border:1px solid #dbe2ea;
+
+    border-radius:12px;
+
+    padding:0 15px;
+
+    display:flex;
+
+    align-items:center;
+
+    transition:.3s;
+
+    background:#f8fafc;
+
+}
+
+.input-field i{
+
+    color:#888;
+
+    margin-right:12px;
+
+}
+
+.input-field input{
+
+    width:100%;
+
+    height:clamp(44px,7vh,52px);
+
+    border:none;
+
+    outline:none;
+
+    font-size:15px;
+
+    background:none;
+
+}
+
+.input-field:focus-within{
+
+    border-color:#2563eb;
+
+    box-shadow:0 0 0 4px rgba(37,99,235,.15);
+
+}
+
+/* ===========================
+   Options
+   =========================== */
+
+.options{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    margin-bottom:clamp(16px,3vh,24px);
+
+    font-size:14px;
+
+}
+
+.options a{
+
+    color:#2563eb;
+
+    text-decoration:none;
+
+}
+
+.options a:hover{
+
+    text-decoration:underline;
+
+}
+
+/* ===========================
+   Button
+   =========================== */
+
+button{
+
+    width:100%;
+
+    height:clamp(44px,7vh,52px);
+
+    border:none;
+
+    border-radius:10px;
+
+    background:#2563eb;
+
+    color:white;
+
+    font-size:17px;
+
+    font-weight:600;
+
+    cursor:pointer;
+
+    transition:.3s;
+
+}
+
+button:hover{
+
+    background:#1d4ed8;
+
+    transform:translateY(-2px);
+
+}
+
+button{
+
+    width:100%;
+
+    height:clamp(44px,7vh,52px);
+
+    border:none;
+
+    border-radius:14px;
+
+    background:#2563eb;
+
+    color:white;
+
+    font-size:17px;
+
+    font-weight:600;
+
+    cursor:pointer;
+
+    transition:.3s;
+
+}
+
+/* ===========================
+   Divider
+   =========================== */
+
+.divider{
+
+    text-align:center;
+
+    margin:clamp(16px,3vh,24px) 0;
+
+    color:#999;
+
+    position:relative;
+
+}
+
+.divider::before{
+
+    content:"";
+
+    position:absolute;
+
+    width:40%;
+
+    height:1px;
+
+    background:#ddd;
+
+    left:0;
+
+    top:50%;
+
+}
+
+.divider::after{
+
+    content:"";
+
+    position:absolute;
+
+    width:40%;
+
+    height:1px;
+
+    background:#ddd;
+
+    right:0;
+
+    top:50%;
+
+}
+
+/* ===========================
+   Register Links
+   =========================== */
+
+.register-links{
+
+    display:flex;
+
+    justify-content:center;
+
+    gap:25px;
+
+}
+
+.register-links a{
+
+    color:#2563eb;
+
+    text-decoration:none;
+
+    font-weight:600;
+
+}
+
+.register-links a:hover{
+
+    text-decoration:underline;
+
+}
+
+/* ===========================
+   Responsive
+   =========================== */
+
+@media(max-width:992px){
+
+.left-panel{
+
+    display:none;
+
+}
+
+.right-panel{
+
+    width:100%;
+
+}
+
+.login-box{
+
+    width:92%;
+
+}
+
+}
+
+@media(max-width:500px){
+
+.login-box{
+
+    padding:clamp(18px,4vh,24px) 20px;
+
+}
+
+.overlay h1{
+
+    font-size:40px;
+
+}
+
+.login-box h2{
+
+    font-size:24px;
+
+}
+
+.register-links{
+
+    flex-direction:column;
+
+    gap:12px;
+
+}
+
+}
+
+@media(max-height:680px){
+
+.login-box{
+
+    padding:16px 28px;
+
+}
+
+.logo{
+
+    width:48px;
+
+    height:48px;
+
+    font-size:22px;
+
+    margin-bottom:10px;
+
+}
+
+.login-box span{
+
+    margin-bottom:14px;
+
+}
+
+.input-box{
+
+    margin-bottom:12px;
+
+}
+
+.input-field input,
+button{
+
+    height:42px;
+
+}
+
+.options{
+
+    margin-bottom:12px;
+
+}
+
+.divider{
+
+    margin:12px 0;
+
+}
+
+}
