@@ -640,6 +640,177 @@ class User
         return $stmt->execute();
     }
 
+    private function getRecruitmentGroupMembers($postId)
+    {
+        $ownerSql = "SELECT sp.user_id, u.email, sp.full_name, sp.student_id, sp.department, sp.semester,
+                           sp.cgpa, sp.phone, sp.profile_picture, 'Owner' AS member_role
+                    FROM recruitment_posts rp
+                    JOIN student_profiles sp ON rp.student_user_id = sp.user_id
+                    JOIN users u ON sp.user_id = u.id
+                    WHERE rp.id = :post_id";
+        $stmt = $this->conn->prepare($ownerSql);
+        $stmt->bindParam(':post_id', $postId, PDO::PARAM_INT);
+        $stmt->execute();
+        $members = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $applicantSql = "SELECT sp.user_id, u.email, sp.full_name, sp.student_id, sp.department, sp.semester,
+                                sp.cgpa, sp.phone, sp.profile_picture, 'Member' AS member_role
+                         FROM post_applications pa
+                         JOIN student_profiles sp ON pa.applicant_user_id = sp.user_id
+                         JOIN users u ON sp.user_id = u.id
+                         WHERE pa.post_id = :post_id AND pa.status = 'accepted'
+                         ORDER BY sp.full_name ASC";
+        $stmt = $this->conn->prepare($applicantSql);
+        $stmt->bindParam(':post_id', $postId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return array_merge($members, $stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    private function getTopicGroupMembers($topicId)
+    {
+        $sql = "SELECT sp.user_id, u.email, sp.full_name, sp.student_id, sp.department, sp.semester,
+                       sp.cgpa, sp.phone, sp.profile_picture, 'Member' AS member_role
+                FROM thesis_topic_applications tta
+                JOIN student_profiles sp ON tta.student_user_id = sp.user_id
+                JOIN users u ON sp.user_id = u.id
+                WHERE tta.topic_id = :topic_id AND tta.status = 'accepted'
+                ORDER BY sp.full_name ASC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':topic_id', $topicId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getStudentGroups($studentUserId)
+    {
+        $groups = [];
+
+        $postSql = "SELECT DISTINCT rp.id, rp.title, rp.department, rp.description, rp.created_at,
+                           rp.teacher_user_id, tp.full_name AS teacher_name, tp.designation AS teacher_designation,
+                           tp.department AS teacher_department
+                    FROM recruitment_posts rp
+                    LEFT JOIN teacher_profiles tp ON rp.teacher_user_id = tp.user_id
+                    LEFT JOIN post_applications pa ON rp.id = pa.post_id
+                    WHERE rp.student_user_id = :student_user_id
+                       OR (pa.applicant_user_id = :student_user_id AND pa.status = 'accepted')
+                    ORDER BY rp.created_at DESC";
+        $stmt = $this->conn->prepare($postSql);
+        $stmt->bindParam(':student_user_id', $studentUserId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $post) {
+            $members = $this->getRecruitmentGroupMembers((int) $post['id']);
+            $groups[] = [
+                'type' => 'Recruitment Post',
+                'title' => $post['title'],
+                'department' => $post['department'],
+                'research_area' => '',
+                'faculty_name' => $post['teacher_name'] ?: 'Faculty not selected',
+                'faculty_designation' => $post['teacher_designation'] ?: '',
+                'faculty_department' => $post['teacher_department'] ?: '',
+                'member_count' => count($members),
+                'members' => $members
+            ];
+        }
+
+        $topicSql = "SELECT tt.id, tt.title, tt.department, tt.research_area, tt.description, tt.created_at,
+                            tp.full_name AS teacher_name, tp.designation AS teacher_designation,
+                            tp.department AS teacher_department
+                     FROM thesis_topic_applications tta
+                     JOIN thesis_topics tt ON tta.topic_id = tt.id
+                     JOIN teacher_profiles tp ON tt.teacher_user_id = tp.user_id
+                     WHERE tta.student_user_id = :student_user_id AND tta.status = 'accepted'
+                     ORDER BY tt.created_at DESC";
+        $stmt = $this->conn->prepare($topicSql);
+        $stmt->bindParam(':student_user_id', $studentUserId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $topic) {
+            $members = $this->getTopicGroupMembers((int) $topic['id']);
+            $groups[] = [
+                'type' => 'Thesis Topic',
+                'title' => $topic['title'],
+                'department' => $topic['department'],
+                'research_area' => $topic['research_area'],
+                'faculty_name' => $topic['teacher_name'],
+                'faculty_designation' => $topic['teacher_designation'],
+                'faculty_department' => $topic['teacher_department'],
+                'member_count' => count($members),
+                'members' => $members
+            ];
+        }
+
+        return $groups;
+    }
+
+    public function getTeacherGroups($teacherUserId)
+    {
+        $groups = [];
+
+        $topicSql = "SELECT tt.id, tt.title, tt.department, tt.research_area,
+                            tp.full_name AS teacher_name, tp.designation AS teacher_designation,
+                            tp.department AS teacher_department
+                     FROM thesis_topics tt
+                     JOIN teacher_profiles tp ON tt.teacher_user_id = tp.user_id
+                     WHERE tt.teacher_user_id = :teacher_user_id
+                     ORDER BY tt.created_at DESC";
+        $stmt = $this->conn->prepare($topicSql);
+        $stmt->bindParam(':teacher_user_id', $teacherUserId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $topic) {
+            $members = $this->getTopicGroupMembers((int) $topic['id']);
+            if (empty($members)) {
+                continue;
+            }
+
+            $groups[] = [
+                'type' => 'Thesis Topic',
+                'title' => $topic['title'],
+                'department' => $topic['department'],
+                'research_area' => $topic['research_area'],
+                'faculty_name' => $topic['teacher_name'],
+                'faculty_designation' => $topic['teacher_designation'],
+                'faculty_department' => $topic['teacher_department'],
+                'member_count' => count($members),
+                'members' => $members
+            ];
+        }
+
+        $postSql = "SELECT rp.id, rp.title, rp.department,
+                           tp.full_name AS teacher_name, tp.designation AS teacher_designation,
+                           tp.department AS teacher_department
+                    FROM recruitment_posts rp
+                    JOIN teacher_profiles tp ON rp.teacher_user_id = tp.user_id
+                    WHERE rp.teacher_user_id = :teacher_user_id
+                    ORDER BY rp.created_at DESC";
+        $stmt = $this->conn->prepare($postSql);
+        $stmt->bindParam(':teacher_user_id', $teacherUserId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $post) {
+            $members = $this->getRecruitmentGroupMembers((int) $post['id']);
+            if (count($members) < 2) {
+                continue;
+            }
+
+            $groups[] = [
+                'type' => 'Recruitment Post',
+                'title' => $post['title'],
+                'department' => $post['department'],
+                'research_area' => '',
+                'faculty_name' => $post['teacher_name'],
+                'faculty_designation' => $post['teacher_designation'],
+                'faculty_department' => $post['teacher_department'],
+                'member_count' => count($members),
+                'members' => $members
+            ];
+        }
+
+        return $groups;
+    }
+
     public function createAnnouncement($adminUserId, $title, $body)
     {
         $sql = "INSERT INTO announcements (admin_user_id, title, body)

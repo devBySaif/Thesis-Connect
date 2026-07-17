@@ -139,6 +139,7 @@ function renderStudentNavbar($active, $studentName, $studentId, $profileImage, $
                     <ul>
                         <li><a href="student_dashboard.php"><i class="fa-solid fa-house"></i> Dashboard</a></li>
                         <li><a href="profile.php"><i class="fa-solid fa-user"></i> Profile</a></li>
+                        <li><a href="student_my_group.php"><i class="fa-solid fa-people-group"></i> My Group</a></li>
                         <li><a href="browse_topics.php"><i class="fa-solid fa-book-open"></i> Browse Topics</a></li>
                         <li><a href="create_post.php"><i class="fa-solid fa-users"></i> Recruitment Posts</a></li>
                         <li><a href="my_posts.php"><i class="fa-solid fa-rectangle-list"></i> My Posts</a></li>

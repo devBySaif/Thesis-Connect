@@ -109,6 +109,7 @@ function renderTeacherNavbar($active, $teacherName, $teacherId, $profileImage, $
                     <ul>
                         <li><a href="teacher_dashboard.php"><i class="fa-solid fa-house"></i> Dashboard</a></li>
                         <li><a href="teacher_profile.php"><i class="fa-solid fa-user"></i> Profile</a></li>
+                        <li><a href="teacher_my_group.php"><i class="fa-solid fa-people-group"></i> My Group</a></li>
                         <li><a href="teacher_topics.php"><i class="fa-solid fa-lightbulb"></i> Thesis Topics</a></li>
                         <li><a href="teacher_recruitment_posts.php"><i class="fa-solid fa-users"></i> Recruitment Posts</a></li>
                         <li><a href="teacher_applications.php"><i class="fa-solid fa-clipboard-check"></i> Applications</a></li>

@@ -104,6 +104,12 @@ $semesters = ['1st Semester', '2nd Semester', '3rd Semester', '4th Semester', '5
                             </a>
                         </li>
                         <li>
+                            <a href="student_my_group.php">
+                                <i class="fa-solid fa-people-group"></i>
+                                My Group
+                            </a>
+                        </li>
+                        <li>
                             <a href="browse_topics.php">
                                 <i class="fa-solid fa-book-open"></i>
                                 Browse Topics
