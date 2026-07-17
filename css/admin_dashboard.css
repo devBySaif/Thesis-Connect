@@ -385,6 +385,11 @@ body {
     white-space: normal;
 }
 
+.admins-table td:nth-child(2) {
+    color: #4f46e5;
+    font-weight: 700;
+}
+
 .alert.success {
     background: #dcfce7;
     border: 1px solid #86efac;

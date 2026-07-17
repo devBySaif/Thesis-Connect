@@ -414,6 +414,31 @@ img{
 
 }
 
+.notification-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    padding:16px 18px;
+    border-bottom:1px solid var(--border);
+}
+
+.notification-header h3{
+    padding:0;
+    border-bottom:0;
+}
+
+.notification-clear-link{
+    color:#38BDF8;
+    font-size:14px;
+    font-weight:700;
+    white-space:nowrap;
+}
+
+.notification-clear-link:hover{
+    color:#7DD3FC;
+}
+
 .notification-list{
 
     max-height:380px;
@@ -1733,6 +1758,28 @@ img{
     margin-bottom:8px;
 }
 
+.student-announcement-board .announcement-list{
+    grid-template-columns:1fr;
+    gap:18px;
+}
+
+.student-announcement-board .announcement-item{
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(108,99,255,.28);
+    border-radius:20px;
+    box-shadow:var(--shadow);
+    min-height:auto;
+    padding:22px;
+}
+
+.student-announcement-board .announcement-item p{
+    margin-top:10px;
+}
+
+.announcement-delete-form{
+    margin-top:14px;
+}
+
 .announcement-item p{
     color:var(--text);
     line-height:1.7;
@@ -1885,6 +1932,74 @@ img{
     color:#fca5a5;
 }
 
+.teacher-stats-grid{
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:18px;
+}
+
+.stat-number{
+    color:#fff;
+    font-size:38px;
+    font-weight:800;
+}
+
+.compact-feed{
+    gap:18px;
+}
+
+.filter-bar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    align-items:center;
+    background:var(--card);
+    border:1px solid var(--border);
+    border-radius:18px;
+    padding:18px;
+    box-shadow:var(--shadow);
+}
+
+.filter-bar select{
+    min-width:160px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    background:#0B1220;
+    color:#fff;
+    font:inherit;
+    padding:12px 14px;
+}
+
+.responsive-table{
+    overflow-x:auto;
+}
+
+.responsive-table table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+.responsive-table th,
+.responsive-table td{
+    border-bottom:1px solid var(--border);
+    color:var(--text);
+    padding:14px 12px;
+    text-align:left;
+}
+
+.responsive-table th{
+    color:#fff;
+}
+
+.teacher-nav{
+    gap:10px;
+}
+
+.teacher-nav a{
+    padding:10px 12px;
+    font-size:14px;
+}
+
 .application-status-box{
     display:grid;
     justify-items:end;
@@ -1924,6 +2039,12 @@ img{
 
     .inline-apply-form,
     .applicant-card dl{
+        grid-template-columns:1fr;
+    }
+}
+
+@media(max-width:992px){
+    .teacher-stats-grid{
         grid-template-columns:1fr;
     }
 }

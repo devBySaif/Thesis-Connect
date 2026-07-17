@@ -99,6 +99,15 @@ class User
         return (int) $stmt->fetchColumn();
     }
 
+    public function getVerifiedUserIdsByRole($role)
+    {
+        $sql = "SELECT id FROM users WHERE role = :role AND is_verified = 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':role', $role);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
     public function createAdmin($email, $password, $fullName, $phone)
     {
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
@@ -263,6 +272,68 @@ class User
         $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function getTeacherProfile($userId)
+    {
+        $sql = "SELECT u.email, u.is_verified, tp.*
+                FROM users u
+                JOIN teacher_profiles tp ON u.id = tp.user_id
+                WHERE u.id = :user_id AND u.role = 'teacher'
+                LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function updateTeacherProfile($userId, array $data)
+    {
+        try {
+            $this->conn->beginTransaction();
+
+            $userSql = "UPDATE users SET email = :email WHERE id = :user_id AND role = 'teacher'";
+            $userStmt = $this->conn->prepare($userSql);
+            $userStmt->execute([
+                ':email' => $data['email'],
+                ':user_id' => $userId
+            ]);
+
+            $profileSql = "UPDATE teacher_profiles
+                           SET full_name = :full_name,
+                               teacher_id = :teacher_id,
+                               designation = :designation,
+                               department = :department,
+                               office = :office,
+                               phone = :phone,
+                               bio = :bio";
+
+            $params = [
+                ':full_name' => $data['full_name'],
+                ':teacher_id' => $data['teacher_id'],
+                ':designation' => $data['designation'],
+                ':department' => $data['department'],
+                ':office' => $data['office'],
+                ':phone' => $data['phone'],
+                ':bio' => $data['bio'],
+                ':user_id' => $userId
+            ];
+
+            if (!empty($data['profile_picture'])) {
+                $profileSql .= ", profile_picture = :profile_picture";
+                $params[':profile_picture'] = $data['profile_picture'];
+            }
+
+            $profileSql .= " WHERE user_id = :user_id";
+            $profileStmt = $this->conn->prepare($profileSql);
+            $profileStmt->execute($params);
+
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            return false;
+        }
     }
 
     public function updateStudentProfile($userId, array $data)
@@ -593,6 +664,17 @@ class User
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function deleteAnnouncement($announcementId, $ownerUserId)
+    {
+        $sql = "DELETE FROM announcements WHERE id = :announcement_id AND admin_user_id = :owner_user_id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([
+            ':announcement_id' => $announcementId,
+            ':owner_user_id' => $ownerUserId
+        ]);
+        return $stmt->rowCount() > 0;
+    }
+
     public function createNotification($userId, $title, $body, $linkUrl)
     {
         $sql = "INSERT INTO notifications (user_id, title, body, link_url)
@@ -610,8 +692,8 @@ class User
     {
         $sql = "SELECT *
                 FROM notifications
-                WHERE user_id = :user_id
-                ORDER BY is_read ASC, created_at DESC
+                WHERE user_id = :user_id AND is_read = 0
+                ORDER BY created_at DESC
                 LIMIT {$limit}";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
@@ -626,6 +708,14 @@ class User
         $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
         $stmt->execute();
         return (int) $stmt->fetchColumn();
+    }
+
+    public function clearNotificationsForUser($userId)
+    {
+        $sql = "UPDATE notifications SET is_read = 1 WHERE user_id = :user_id AND is_read = 0";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+        return $stmt->execute();
     }
 
     public function readNotification($notificationId, $userId)
@@ -650,6 +740,217 @@ class User
         ]);
 
         return $linkUrl;
+    }
+
+    public function countThesisTopicsByTeacher($teacherUserId)
+    {
+        $sql = "SELECT COUNT(*) FROM thesis_topics WHERE teacher_user_id = :teacher_user_id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':teacher_user_id', $teacherUserId, PDO::PARAM_INT);
+        $stmt->execute();
+        return (int) $stmt->fetchColumn();
+    }
+
+    public function countActiveRecruitmentRequests()
+    {
+        $sql = "SELECT COUNT(*) FROM recruitment_posts WHERE status = 'open' AND deadline >= CURDATE()";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
+        return (int) $stmt->fetchColumn();
+    }
+
+    public function countSupervisedStudents($teacherUserId)
+    {
+        $sql = "SELECT COUNT(DISTINCT tta.student_user_id)
+                FROM thesis_topic_applications tta
+                JOIN thesis_topics tt ON tta.topic_id = tt.id
+                WHERE tt.teacher_user_id = :teacher_user_id AND tta.status = 'accepted'";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':teacher_user_id', $teacherUserId, PDO::PARAM_INT);
+        $stmt->execute();
+        return (int) $stmt->fetchColumn();
+    }
+
+    public function saveThesisTopic($teacherUserId, array $data, $topicId = 0)
+    {
+        if ($topicId) {
+            $sql = "UPDATE thesis_topics
+                    SET title = :title, department = :department, research_area = :research_area,
+                        description = :description, status = :status
+                    WHERE id = :topic_id AND teacher_user_id = :teacher_user_id";
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute([
+                ':title' => $data['title'],
+                ':department' => $data['department'],
+                ':research_area' => $data['research_area'],
+                ':description' => $data['description'],
+                ':status' => $data['status'],
+                ':topic_id' => $topicId,
+                ':teacher_user_id' => $teacherUserId
+            ]);
+        }
+
+        $sql = "INSERT INTO thesis_topics (teacher_user_id, title, department, research_area, description, status)
+                VALUES (:teacher_user_id, :title, :department, :research_area, :description, :status)";
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute([
+            ':teacher_user_id' => $teacherUserId,
+            ':title' => $data['title'],
+            ':department' => $data['department'],
+            ':research_area' => $data['research_area'],
+            ':description' => $data['description'],
+            ':status' => $data['status']
+        ]);
+    }
+
+    public function deleteThesisTopic($topicId, $teacherUserId)
+    {
+        try {
+            $this->conn->beginTransaction();
+            $stmt = $this->conn->prepare("DELETE tta FROM thesis_topic_applications tta JOIN thesis_topics tt ON tta.topic_id = tt.id WHERE tta.topic_id = :topic_id AND tt.teacher_user_id = :teacher_user_id");
+            $stmt->execute([':topic_id' => $topicId, ':teacher_user_id' => $teacherUserId]);
+            $stmt = $this->conn->prepare("DELETE FROM thesis_topics WHERE id = :topic_id AND teacher_user_id = :teacher_user_id");
+            $stmt->execute([':topic_id' => $topicId, ':teacher_user_id' => $teacherUserId]);
+            $deleted = $stmt->rowCount() > 0;
+            $this->conn->commit();
+            return $deleted;
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            return false;
+        }
+    }
+
+    public function getThesisTopicById($topicId)
+    {
+        $sql = "SELECT tt.*, tp.full_name AS teacher_name, tp.designation, tp.profile_picture AS teacher_picture
+                FROM thesis_topics tt
+                JOIN teacher_profiles tp ON tt.teacher_user_id = tp.user_id
+                WHERE tt.id = :topic_id LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':topic_id', $topicId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function getTeacherTopics($teacherUserId)
+    {
+        $sql = "SELECT tt.*, COUNT(tta.id) AS application_count
+                FROM thesis_topics tt
+                LEFT JOIN thesis_topic_applications tta ON tt.id = tta.topic_id
+                WHERE tt.teacher_user_id = :teacher_user_id
+                GROUP BY tt.id
+                ORDER BY tt.created_at DESC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':teacher_user_id', $teacherUserId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getAllThesisTopics($viewerUserId = 0)
+    {
+        $sql = "SELECT tt.*, tp.full_name AS teacher_name, tp.designation,
+                       my_app.status AS my_status
+                FROM thesis_topics tt
+                JOIN teacher_profiles tp ON tt.teacher_user_id = tp.user_id
+                LEFT JOIN thesis_topic_applications my_app
+                    ON tt.id = my_app.topic_id AND my_app.student_user_id = :viewer_user_id
+                ORDER BY tt.created_at DESC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':viewer_user_id', $viewerUserId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function applyToThesisTopic($topicId, $studentUserId, $message)
+    {
+        $topic = $this->getThesisTopicById($topicId);
+        if (!$topic || $topic['status'] !== 'available') {
+            return false;
+        }
+
+        try {
+            $sql = "INSERT INTO thesis_topic_applications (topic_id, student_user_id, message)
+                    VALUES (:topic_id, :student_user_id, :message)";
+            $stmt = $this->conn->prepare($sql);
+            return $stmt->execute([
+                ':topic_id' => $topicId,
+                ':student_user_id' => $studentUserId,
+                ':message' => $message
+            ]);
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    public function getTopicApplicationsForTeacher($teacherUserId)
+    {
+        $sql = "SELECT tta.*, tt.title AS topic_title,
+                       u.email, sp.full_name, sp.student_id, sp.department, sp.semester, sp.cgpa, sp.phone, sp.profile_picture
+                FROM thesis_topic_applications tta
+                JOIN thesis_topics tt ON tta.topic_id = tt.id
+                JOIN users u ON tta.student_user_id = u.id
+                JOIN student_profiles sp ON tta.student_user_id = sp.user_id
+                WHERE tt.teacher_user_id = :teacher_user_id
+                ORDER BY tta.created_at DESC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':teacher_user_id', $teacherUserId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getTopicApplicationForTeacher($applicationId, $teacherUserId)
+    {
+        $sql = "SELECT tta.*, tt.title AS topic_title, tt.id AS topic_id,
+                       sp.full_name AS student_name
+                FROM thesis_topic_applications tta
+                JOIN thesis_topics tt ON tta.topic_id = tt.id
+                JOIN student_profiles sp ON tta.student_user_id = sp.user_id
+                WHERE tta.id = :application_id AND tt.teacher_user_id = :teacher_user_id
+                LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([':application_id' => $applicationId, ':teacher_user_id' => $teacherUserId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function updateTopicApplicationStatus($applicationId, $teacherUserId, $status)
+    {
+        try {
+            $this->conn->beginTransaction();
+            $app = $this->getTopicApplicationForTeacher($applicationId, $teacherUserId);
+            if (!$app) {
+                throw new Exception('Application not found.');
+            }
+
+            $stmt = $this->conn->prepare("UPDATE thesis_topic_applications tta JOIN thesis_topics tt ON tta.topic_id = tt.id SET tta.status = :status WHERE tta.id = :application_id AND tt.teacher_user_id = :teacher_user_id");
+            $stmt->execute([':status' => $status, ':application_id' => $applicationId, ':teacher_user_id' => $teacherUserId]);
+
+            if ($status === 'accepted') {
+                $stmt = $this->conn->prepare("UPDATE thesis_topics SET status = 'assigned' WHERE id = :topic_id AND teacher_user_id = :teacher_user_id");
+                $stmt->execute([':topic_id' => $app['topic_id'], ':teacher_user_id' => $teacherUserId]);
+            }
+
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            return false;
+        }
+    }
+
+    public function getSupervisedStudents($teacherUserId)
+    {
+        $sql = "SELECT tta.status, tt.title AS topic_title,
+                       sp.full_name, sp.student_id, sp.department, sp.cgpa, sp.phone, u.email
+                FROM thesis_topic_applications tta
+                JOIN thesis_topics tt ON tta.topic_id = tt.id
+                JOIN student_profiles sp ON tta.student_user_id = sp.user_id
+                JOIN users u ON tta.student_user_id = u.id
+                WHERE tt.teacher_user_id = :teacher_user_id AND tta.status = 'accepted'
+                ORDER BY sp.full_name ASC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':teacher_user_id', $teacherUserId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /* ===============================

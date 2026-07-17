@@ -27,7 +27,7 @@ $announcements = $user->getAnnouncements(50);
             <p>Latest updates published by the admin panel.</p>
         </section>
 
-        <section class="profile-card">
+        <section class="student-announcement-board">
             <div class="announcement-list">
                 <?php if (empty($announcements)): ?>
                     <p class="muted-text">No announcements published yet.</p>

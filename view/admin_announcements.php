@@ -92,6 +92,7 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
                                 <th>Title</th>
                                 <th>Details</th>
                                 <th>Created At</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -101,6 +102,15 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
                                     <td><?= htmlspecialchars($announcement['title']) ?></td>
                                     <td><?= htmlspecialchars($announcement['body']) ?></td>
                                     <td><?= htmlspecialchars($announcement['created_at']) ?></td>
+                                    <td>
+                                        <?php if ((int) $announcement['admin_user_id'] === (int) $_SESSION['user']['id']): ?>
+                                            <form method="POST" action="../control/AuthController.php">
+                                                <input type="hidden" name="action" value="announcement_delete">
+                                                <input type="hidden" name="announcement_id" value="<?= htmlspecialchars($announcement['id']) ?>">
+                                                <button type="submit" class="action-btn delete">Delete</button>
+                                            </form>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>

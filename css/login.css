@@ -24,11 +24,9 @@ html{
     height:100%;
 
 }
-
 /* ===========================
    Main Container
    =========================== */
-
 .container{
 
     display:flex;
@@ -42,11 +40,9 @@ html{
     align-items:center;
 
 }
-
 /* ===========================
    Left Panel
    =========================== */
-
 .left-panel{
 
     width:50%;
@@ -601,7 +597,5 @@ button{
 .divider{
 
     margin:12px 0;
-
 }
-
 }

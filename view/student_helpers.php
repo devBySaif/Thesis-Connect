@@ -97,7 +97,12 @@ function renderStudentNavbar($active, $studentName, $studentId, $profileImage, $
                 </button>
 
                 <div id="notificationDropdown" class="notification-dropdown">
-                    <h3>Notifications</h3>
+                    <div class="notification-header">
+                        <h3>Notifications</h3>
+                        <?php if (!empty($notifications)): ?>
+                            <a href="clear_notifications.php" class="notification-clear-link">Clear All</a>
+                        <?php endif; ?>
+                    </div>
                     <div class="notification-list">
                         <?php if (empty($notifications)): ?>
                             <div class="notification-item">

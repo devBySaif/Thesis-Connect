@@ -103,6 +103,38 @@ switch ($action) {
 
         break;
 
+    case "teacher_profile_update":
+        teacherProfileUpdate($user);
+        break;
+
+    case "teacher_password_update":
+        teacherPasswordUpdate($user);
+        break;
+
+    case "teacher_topic_save":
+        teacherTopicSave($user);
+        break;
+
+    case "teacher_topic_delete":
+        teacherTopicDelete($user);
+        break;
+
+    case "topic_apply":
+        topicApply($user);
+        break;
+
+    case "topic_application_action":
+        topicApplicationAction($user);
+        break;
+
+    case "teacher_announcement_create":
+        teacherAnnouncementCreate($user);
+        break;
+
+    case "announcement_delete":
+        announcementDelete($user);
+        break;
+
     default:
 
         echo json_encode([
@@ -155,6 +187,23 @@ function loginUser($user)
         ];
 
         header('Location: ../view/create_post.php');
+        exit;
+    }
+
+    if ($userRow['role'] === 'teacher') {
+        if ((int) $userRow['is_verified'] !== 1) {
+            header('Location: ../view/login.php?error=' . urlencode('Your teacher account is pending admin approval.'));
+            exit;
+        }
+
+        $_SESSION['user'] = [
+            'id' => $userRow['id'],
+            'email' => $userRow['email'],
+            'role' => $userRow['role'],
+            'is_verified' => $userRow['is_verified']
+        ];
+
+        header('Location: ../view/teacher_recruitment_posts.php');
         exit;
     }
 
@@ -643,6 +692,14 @@ function requireAdminSession()
     }
 }
 
+function requireTeacherSession()
+{
+    if (empty($_SESSION['user']) || $_SESSION['user']['role'] !== 'teacher') {
+        header('Location: ../view/login.php');
+        exit;
+    }
+}
+
 function redirectWithStudentFlash($location, $message, $type = 'error')
 {
     $_SESSION[$type === 'success' ? 'student_success' : 'student_error'] = $message;
@@ -653,6 +710,13 @@ function redirectWithStudentFlash($location, $message, $type = 'error')
 function redirectWithAdminFlash($location, $message, $type = 'error')
 {
     $_SESSION[$type === 'success' ? 'admin_success' : 'admin_error'] = $message;
+    header('Location: ' . $location);
+    exit;
+}
+
+function redirectWithTeacherFlash($location, $message, $type = 'error')
+{
+    $_SESSION[$type === 'success' ? 'teacher_success' : 'teacher_error'] = $message;
     header('Location: ' . $location);
     exit;
 }
@@ -700,6 +764,41 @@ function uploadStudentProfilePicture()
 
     if (!move_uploaded_file($_FILES['profile_picture']['tmp_name'], $uploadDir . $filename)) {
         redirectStudentProfile('Profile picture could not be saved.');
+    }
+
+    return $filename;
+}
+
+function uploadProfilePictureOrNull($redirectFunction)
+{
+    if (empty($_FILES['profile_picture']['name'])) {
+        return null;
+    }
+
+    if ($_FILES['profile_picture']['error'] !== UPLOAD_ERR_OK) {
+        $redirectFunction('Profile picture upload failed.');
+    }
+
+    $allowedTypes = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+    $imageInfo = getimagesize($_FILES['profile_picture']['tmp_name']);
+    $mimeType = $imageInfo['mime'] ?? '';
+
+    if (!isset($allowedTypes[$mimeType])) {
+        $redirectFunction('Only JPG, PNG, or WEBP profile pictures are allowed.');
+    }
+
+    if ($_FILES['profile_picture']['size'] > 2 * 1024 * 1024) {
+        $redirectFunction('Profile picture must be 2MB or smaller.');
+    }
+
+    $uploadDir = __DIR__ . '/../uploads/profile/';
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
+
+    $filename = time() . '_' . uniqid() . '.' . $allowedTypes[$mimeType];
+    if (!move_uploaded_file($_FILES['profile_picture']['tmp_name'], $uploadDir . $filename)) {
+        $redirectFunction('Profile picture could not be saved.');
     }
 
     return $filename;
@@ -941,5 +1040,250 @@ function announcementCreate($user)
         redirectWithAdminFlash('../view/admin_announcements.php', 'Announcement could not be published.');
     }
 
+    foreach ($user->getVerifiedUserIdsByRole('student') as $studentUserId) {
+        $user->createNotification(
+            (int) $studentUserId,
+            'New announcement',
+            $title,
+            'announcements.php'
+        );
+    }
+
     redirectWithAdminFlash('../view/admin_announcements.php', 'Announcement published successfully.', 'success');
+}
+
+function redirectTeacherProfile($message, $type = 'error')
+{
+    $_SESSION[$type === 'success' ? 'teacher_profile_success' : 'teacher_profile_error'] = $message;
+    header('Location: ../view/teacher_profile.php');
+    exit;
+}
+
+function teacherProfileUpdate($user)
+{
+    requireTeacherSession();
+
+    $userId = (int) $_SESSION['user']['id'];
+    $data = [
+        'full_name' => trim($_POST['full_name'] ?? ''),
+        'teacher_id' => trim($_POST['teacher_id'] ?? ''),
+        'designation' => trim($_POST['designation'] ?? ''),
+        'department' => trim($_POST['department'] ?? ''),
+        'office' => trim($_POST['office'] ?? ''),
+        'phone' => trim($_POST['phone'] ?? ''),
+        'email' => trim($_POST['email'] ?? ''),
+        'bio' => trim($_POST['bio'] ?? ''),
+        'profile_picture' => null
+    ];
+
+    if ($data['full_name'] === '' || $data['teacher_id'] === '' || $data['designation'] === '' || $data['department'] === '' || $data['phone'] === '' || $data['email'] === '') {
+        redirectTeacherProfile('Please fill all required profile fields.');
+    }
+
+    if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+        redirectTeacherProfile('Invalid email address.');
+    }
+
+    if ($user->emailExistsExceptUser($data['email'], $userId)) {
+        redirectTeacherProfile('This email is already used by another account.');
+    }
+
+    $data['profile_picture'] = uploadProfilePictureOrNull('redirectTeacherProfile');
+
+    if (!$user->updateTeacherProfile($userId, $data)) {
+        redirectTeacherProfile('Profile could not be updated.');
+    }
+
+    $_SESSION['user']['email'] = $data['email'];
+    redirectTeacherProfile('Profile updated successfully.', 'success');
+}
+
+function teacherPasswordUpdate($user)
+{
+    requireTeacherSession();
+
+    $userId = (int) $_SESSION['user']['id'];
+    $currentPassword = $_POST['current_password'] ?? '';
+    $newPassword = $_POST['new_password'] ?? '';
+    $confirmPassword = $_POST['confirm_password'] ?? '';
+
+    if ($currentPassword === '' || $newPassword === '' || $confirmPassword === '') {
+        redirectTeacherProfile('Please fill all password fields.');
+    }
+
+    $userRow = $user->getUserById($userId);
+    if (!$userRow || !password_verify($currentPassword, $userRow['password'])) {
+        redirectTeacherProfile('Current password is incorrect.');
+    }
+
+    if (strlen($newPassword) < 8) {
+        redirectTeacherProfile('New password must be at least 8 characters.');
+    }
+
+    if ($newPassword !== $confirmPassword) {
+        redirectTeacherProfile('New password and confirm password do not match.');
+    }
+
+    if (!$user->updateUserPassword($userId, $newPassword)) {
+        redirectTeacherProfile('Password could not be updated.');
+    }
+
+    redirectTeacherProfile('Password updated successfully.', 'success');
+}
+
+function teacherTopicSave($user)
+{
+    requireTeacherSession();
+
+    $teacherUserId = (int) $_SESSION['user']['id'];
+    $topicId = (int) ($_POST['topic_id'] ?? 0);
+    $data = [
+        'title' => trim($_POST['title'] ?? ''),
+        'department' => trim($_POST['department'] ?? ''),
+        'research_area' => trim($_POST['research_area'] ?? ''),
+        'description' => trim($_POST['description'] ?? ''),
+        'status' => in_array($_POST['status'] ?? 'available', ['available', 'assigned'], true) ? $_POST['status'] : 'available'
+    ];
+
+    if ($data['title'] === '' || $data['department'] === '' || $data['research_area'] === '') {
+        redirectWithTeacherFlash('../view/teacher_topics.php' . ($topicId ? '?edit=' . $topicId : ''), 'Please fill title, department, and research area.');
+    }
+
+    if (!$user->saveThesisTopic($teacherUserId, $data, $topicId)) {
+        redirectWithTeacherFlash('../view/teacher_topics.php', 'Topic could not be saved.');
+    }
+
+    redirectWithTeacherFlash('../view/teacher_topics.php', $topicId ? 'Topic updated successfully.' : 'Topic added successfully.', 'success');
+}
+
+function teacherTopicDelete($user)
+{
+    requireTeacherSession();
+
+    $topicId = (int) ($_POST['topic_id'] ?? 0);
+    if (!$topicId || !$user->deleteThesisTopic($topicId, (int) $_SESSION['user']['id'])) {
+        redirectWithTeacherFlash('../view/teacher_topics.php', 'Topic could not be deleted.');
+    }
+
+    redirectWithTeacherFlash('../view/teacher_topics.php', 'Topic deleted successfully.', 'success');
+}
+
+function topicApply($user)
+{
+    requireStudentSession();
+
+    $topicId = (int) ($_POST['topic_id'] ?? 0);
+    $message = trim($_POST['message'] ?? '');
+
+    if (!$topicId || $message === '') {
+        redirectWithStudentFlash('../view/browse_topics.php', 'Please write a message before applying.');
+    }
+
+    $topic = $user->getThesisTopicById($topicId);
+    if (!$user->applyToThesisTopic($topicId, (int) $_SESSION['user']['id'], $message)) {
+        redirectWithStudentFlash('../view/browse_topics.php', 'Could not apply. You may have already applied or the topic is not available.');
+    }
+
+    $student = $user->getStudentProfile((int) $_SESSION['user']['id']);
+    if ($topic) {
+        $user->createNotification(
+            (int) $topic['teacher_user_id'],
+            'New thesis topic application',
+            ($student['full_name'] ?? 'A student') . ' applied for "' . $topic['title'] . '".',
+            'teacher_applications.php#topic-applications'
+        );
+    }
+
+    redirectWithStudentFlash('../view/browse_topics.php', 'Application submitted successfully.', 'success');
+}
+
+function topicApplicationAction($user)
+{
+    requireTeacherSession();
+
+    $applicationId = (int) ($_POST['application_id'] ?? 0);
+    $status = trim($_POST['application_status'] ?? '');
+
+    if (!$applicationId || !in_array($status, ['accepted', 'rejected'], true)) {
+        redirectWithTeacherFlash('../view/teacher_applications.php', 'Invalid application action.');
+    }
+
+    $application = $user->getTopicApplicationForTeacher($applicationId, (int) $_SESSION['user']['id']);
+
+    if (!$user->updateTopicApplicationStatus($applicationId, (int) $_SESSION['user']['id'], $status)) {
+        redirectWithTeacherFlash('../view/teacher_applications.php', 'Application status could not be updated.');
+    }
+
+    if ($application) {
+        $user->createNotification(
+            (int) $application['student_user_id'],
+            $status === 'accepted' ? 'Topic application accepted' : 'Topic application rejected',
+            'Your application for "' . $application['topic_title'] . '" was ' . $status . '.',
+            'browse_topics.php#topic-' . $application['topic_id']
+        );
+
+        if ($status === 'accepted') {
+            $user->createNotification(
+                (int) $_SESSION['user']['id'],
+                'Topic assigned',
+                $application['student_name'] . ' is now assigned to "' . $application['topic_title'] . '".',
+                'teacher_supervised_students.php'
+            );
+        }
+    }
+
+    redirectWithTeacherFlash('../view/teacher_applications.php', 'Application ' . $status . ' successfully.', 'success');
+}
+
+function teacherAnnouncementCreate($user)
+{
+    requireTeacherSession();
+
+    $title = trim($_POST['title'] ?? '');
+    $body = trim($_POST['body'] ?? '');
+
+    if ($title === '' || $body === '') {
+        redirectWithTeacherFlash('../view/teacher_announcements.php', 'Please fill announcement title and details.');
+    }
+
+    if (!$user->createAnnouncement((int) $_SESSION['user']['id'], $title, $body)) {
+        redirectWithTeacherFlash('../view/teacher_announcements.php', 'Announcement could not be published.');
+    }
+
+    foreach ($user->getVerifiedUserIdsByRole('student') as $studentUserId) {
+        $user->createNotification(
+            (int) $studentUserId,
+            'New announcement',
+            $title,
+            'announcements.php'
+        );
+    }
+
+    $user->createNotification((int) $_SESSION['user']['id'], 'Announcement published', 'Your announcement "' . $title . '" has been published.', 'teacher_announcements.php');
+    redirectWithTeacherFlash('../view/teacher_announcements.php', 'Announcement published successfully.', 'success');
+}
+
+function announcementDelete($user)
+{
+    if (empty($_SESSION['user']) || !in_array($_SESSION['user']['role'], ['admin', 'teacher'], true)) {
+        header('Location: ../view/login.php');
+        exit;
+    }
+
+    $announcementId = (int) ($_POST['announcement_id'] ?? 0);
+    $role = $_SESSION['user']['role'];
+    $redirect = $role === 'admin' ? '../view/admin_announcements.php' : '../view/teacher_announcements.php';
+
+    if (!$announcementId || !$user->deleteAnnouncement($announcementId, (int) $_SESSION['user']['id'])) {
+        if ($role === 'admin') {
+            redirectWithAdminFlash($redirect, 'Announcement could not be deleted.');
+        }
+        redirectWithTeacherFlash($redirect, 'Announcement could not be deleted.');
+    }
+
+    if ($role === 'admin') {
+        redirectWithAdminFlash($redirect, 'Announcement deleted successfully.', 'success');
+    }
+
+    redirectWithTeacherFlash($redirect, 'Announcement deleted successfully.', 'success');
 }
