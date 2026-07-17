@@ -61,6 +61,18 @@ switch ($action) {
 
         break;
 
+    case "student_profile_update":
+
+        studentProfileUpdate($user);
+
+        break;
+
+    case "student_password_update":
+
+        studentPasswordUpdate($user);
+
+        break;
+
     default:
 
         echo json_encode([
@@ -87,20 +99,36 @@ function loginUser($user)
         exit;
     }
 
-    $_SESSION['user'] = [
-        'id' => $userRow['id'],
-        'email' => $userRow['email'],
-        'role' => $userRow['role'],
-        'is_verified' => $userRow['is_verified']
-    ];
-
     if ($userRow['role'] === 'admin') {
+        $_SESSION['user'] = [
+            'id' => $userRow['id'],
+            'email' => $userRow['email'],
+            'role' => $userRow['role'],
+            'is_verified' => $userRow['is_verified']
+        ];
+
         header('Location: ../view/admin_dashboard.php');
         exit;
     }
 
-    // Redirect non-admin users to login page or their own dashboard if implemented
-    header('Location: ../view/login.php');
+    if ($userRow['role'] === 'student') {
+        if ((int) $userRow['is_verified'] !== 1) {
+            header('Location: ../view/login.php?error=' . urlencode('Your student account is pending admin approval.'));
+            exit;
+        }
+
+        $_SESSION['user'] = [
+            'id' => $userRow['id'],
+            'email' => $userRow['email'],
+            'role' => $userRow['role'],
+            'is_verified' => $userRow['is_verified']
+        ];
+
+        header('Location: ../view/student_dashboard.php');
+        exit;
+    }
+
+    header('Location: ../view/login.php?error=' . urlencode('Dashboard is not available for this account yet.'));
     exit;
 }
 
@@ -567,4 +595,145 @@ function adminCreate($user)
     $_SESSION['admin_success'] = 'New admin account created successfully.';
     header('Location: ../view/admin_manage_admins.php');
     exit;
+}
+
+function requireStudentSession()
+{
+    if (empty($_SESSION['user']) || $_SESSION['user']['role'] !== 'student') {
+        header('Location: ../view/login.php');
+        exit;
+    }
+}
+
+function redirectStudentProfile($message, $type = 'error')
+{
+    $_SESSION[$type === 'success' ? 'student_profile_success' : 'student_profile_error'] = $message;
+    header('Location: ../view/profile.php');
+    exit;
+}
+
+function uploadStudentProfilePicture()
+{
+    if (empty($_FILES['profile_picture']['name'])) {
+        return null;
+    }
+
+    if ($_FILES['profile_picture']['error'] !== UPLOAD_ERR_OK) {
+        redirectStudentProfile('Profile picture upload failed.');
+    }
+
+    $allowedTypes = [
+        'image/jpeg' => 'jpg',
+        'image/png' => 'png',
+        'image/webp' => 'webp'
+    ];
+
+    $imageInfo = getimagesize($_FILES['profile_picture']['tmp_name']);
+    $mimeType = $imageInfo['mime'] ?? '';
+
+    if (!isset($allowedTypes[$mimeType])) {
+        redirectStudentProfile('Only JPG, PNG, or WEBP profile pictures are allowed.');
+    }
+
+    if ($_FILES['profile_picture']['size'] > 2 * 1024 * 1024) {
+        redirectStudentProfile('Profile picture must be 2MB or smaller.');
+    }
+
+    $uploadDir = __DIR__ . '/../uploads/profile/';
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0777, true);
+    }
+
+    $filename = time() . '_' . uniqid() . '.' . $allowedTypes[$mimeType];
+
+    if (!move_uploaded_file($_FILES['profile_picture']['tmp_name'], $uploadDir . $filename)) {
+        redirectStudentProfile('Profile picture could not be saved.');
+    }
+
+    return $filename;
+}
+
+function studentProfileUpdate($user)
+{
+    requireStudentSession();
+
+    $userId = (int) $_SESSION['user']['id'];
+    $fullName = trim($_POST['full_name'] ?? '');
+    $studentId = trim($_POST['student_id'] ?? '');
+    $department = trim($_POST['department'] ?? '');
+    $semester = trim($_POST['semester'] ?? '');
+    $cgpa = trim($_POST['cgpa'] ?? '');
+    $phone = trim($_POST['phone'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $bio = trim($_POST['bio'] ?? '');
+
+    if (empty($fullName) || empty($studentId) || empty($department) || empty($semester) || empty($phone) || empty($email)) {
+        redirectStudentProfile('Please fill all required profile fields.');
+    }
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        redirectStudentProfile('Invalid email address.');
+    }
+
+    if ($cgpa !== '' && ($cgpa < 0 || $cgpa > 4)) {
+        redirectStudentProfile('CGPA must be between 0 and 4.');
+    }
+
+    if ($user->emailExistsExceptUser($email, $userId)) {
+        redirectStudentProfile('This email is already used by another account.');
+    }
+
+    $profilePicture = uploadStudentProfilePicture();
+
+    $updated = $user->updateStudentProfile($userId, [
+        'full_name' => $fullName,
+        'student_id' => $studentId,
+        'department' => $department,
+        'semester' => $semester,
+        'cgpa' => $cgpa,
+        'phone' => $phone,
+        'email' => $email,
+        'bio' => $bio,
+        'profile_picture' => $profilePicture
+    ]);
+
+    if (!$updated) {
+        redirectStudentProfile('Profile could not be updated.');
+    }
+
+    $_SESSION['user']['email'] = $email;
+    redirectStudentProfile('Profile updated successfully.', 'success');
+}
+
+function studentPasswordUpdate($user)
+{
+    requireStudentSession();
+
+    $userId = (int) $_SESSION['user']['id'];
+    $currentPassword = $_POST['current_password'] ?? '';
+    $newPassword = $_POST['new_password'] ?? '';
+    $confirmPassword = $_POST['confirm_password'] ?? '';
+
+    if (empty($currentPassword) || empty($newPassword) || empty($confirmPassword)) {
+        redirectStudentProfile('Please fill all password fields.');
+    }
+
+    $userRow = $user->getUserById($userId);
+    if (!$userRow || !password_verify($currentPassword, $userRow['password'])) {
+        redirectStudentProfile('Current password is incorrect.');
+    }
+
+    if (strlen($newPassword) < 8) {
+        redirectStudentProfile('New password must be at least 8 characters.');
+    }
+
+    if ($newPassword !== $confirmPassword) {
+        redirectStudentProfile('New password and confirm password do not match.');
+    }
+
+    if (!$user->updateUserPassword($userId, $newPassword)) {
+        redirectStudentProfile('Password could not be updated.');
+    }
+
+    redirectStudentProfile('Password updated successfully.', 'success');
 }

@@ -29,6 +29,16 @@ class User
         return $stmt->rowCount() > 0;
     }
 
+    public function emailExistsExceptUser($email, $userId)
+    {
+        $sql = "SELECT id FROM users WHERE email = :email AND id != :user_id LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':email', $email);
+        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->rowCount() > 0;
+    }
+
     /* ===============================
        Register User
     ================================ */
@@ -228,6 +238,88 @@ class User
         $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function getStudentProfile($userId)
+    {
+        $sql = "SELECT u.email, u.is_verified, sp.*
+                FROM users u
+                JOIN student_profiles sp ON u.id = sp.user_id
+                WHERE u.id = :user_id AND u.role = 'student'
+                LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function updateStudentProfile($userId, array $data)
+    {
+        try {
+            $this->conn->beginTransaction();
+
+            $userSql = "UPDATE users SET email = :email WHERE id = :user_id AND role = 'student'";
+            $userStmt = $this->conn->prepare($userSql);
+            $userStmt->execute([
+                ':email' => $data['email'],
+                ':user_id' => $userId
+            ]);
+
+            $profileSql = "UPDATE student_profiles
+                           SET full_name = :full_name,
+                               student_id = :student_id,
+                               department = :department,
+                               semester = :semester,
+                               cgpa = :cgpa,
+                               phone = :phone,
+                               bio = :bio";
+
+            $params = [
+                ':full_name' => $data['full_name'],
+                ':student_id' => $data['student_id'],
+                ':department' => $data['department'],
+                ':semester' => $data['semester'],
+                ':cgpa' => $data['cgpa'],
+                ':phone' => $data['phone'],
+                ':bio' => $data['bio'],
+                ':user_id' => $userId
+            ];
+
+            if (!empty($data['profile_picture'])) {
+                $profileSql .= ", profile_picture = :profile_picture";
+                $params[':profile_picture'] = $data['profile_picture'];
+            }
+
+            $profileSql .= " WHERE user_id = :user_id";
+            $profileStmt = $this->conn->prepare($profileSql);
+            $profileStmt->execute($params);
+
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            return false;
+        }
+    }
+
+    public function getUserById($userId)
+    {
+        $sql = "SELECT * FROM users WHERE id = :user_id LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function updateUserPassword($userId, $password)
+    {
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+        $sql = "UPDATE users SET password = :password WHERE id = :user_id";
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute([
+            ':password' => $hashedPassword,
+            ':user_id' => $userId
+        ]);
     }
 
     /* ===============================
