@@ -8,7 +8,7 @@
 
     <title>Student Registration | ThesisConnect</title>
 
-    <link rel="stylesheet" href="../css/student_register.css">
+    <link rel="stylesheet" href="../css/student_register.css?v=20260718a">
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
