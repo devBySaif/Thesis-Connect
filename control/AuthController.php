@@ -55,6 +55,12 @@ switch ($action) {
 
         break;
 
+    case "admin_create":
+
+        adminCreate($user);
+
+        break;
+
     default:
 
         echo json_encode([
@@ -506,5 +512,59 @@ function adminTeacherAction($user)
     }
 
     header('Location: ../view/admin_manage_teachers.php');
+    exit;
+}
+
+function adminCreate($user)
+{
+    if (empty($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
+        header('Location: ../view/login.php');
+        exit;
+    }
+
+    $fullName = trim($_POST['full_name'] ?? '');
+    $phone = trim($_POST['phone'] ?? '');
+    $email = trim($_POST['email'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $confirmPassword = $_POST['confirm_password'] ?? '';
+
+    if (empty($fullName) || empty($email) || empty($password)) {
+        $_SESSION['admin_error'] = 'Name, email, and password are required.';
+        header('Location: ../view/admin_manage_admins.php');
+        exit;
+    }
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $_SESSION['admin_error'] = 'Invalid email address.';
+        header('Location: ../view/admin_manage_admins.php');
+        exit;
+    }
+
+    if (strlen($password) < 8) {
+        $_SESSION['admin_error'] = 'Password must be at least 8 characters.';
+        header('Location: ../view/admin_manage_admins.php');
+        exit;
+    }
+
+    if ($password !== $confirmPassword) {
+        $_SESSION['admin_error'] = 'Passwords do not match.';
+        header('Location: ../view/admin_manage_admins.php');
+        exit;
+    }
+
+    if ($user->emailExists($email)) {
+        $_SESSION['admin_error'] = 'Email already exists.';
+        header('Location: ../view/admin_manage_admins.php');
+        exit;
+    }
+
+    if (!$user->createAdmin($email, $password, $fullName, $phone)) {
+        $_SESSION['admin_error'] = 'Admin account could not be created.';
+        header('Location: ../view/admin_manage_admins.php');
+        exit;
+    }
+
+    $_SESSION['admin_success'] = 'New admin account created successfully.';
+    header('Location: ../view/admin_manage_admins.php');
     exit;
 }

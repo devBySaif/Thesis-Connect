@@ -14,6 +14,7 @@ $user = new User($conn);
 
 $totalStudents = $user->countUsersByRole('student');
 $totalTeachers = $user->countUsersByRole('teacher');
+$totalAdmins = $user->countUsersByRole('admin');
 $pendingStudents = $user->countPendingUsersByRole('student');
 $pendingTeachers = $user->countPendingUsersByRole('teacher');
 $totalThesisTopics = $user->countExistingTables(['thesis_topics', 'topics']);
@@ -40,6 +41,7 @@ $totalGroups = $user->countExistingTables(['groups', 'research_groups']);
             <a class="active" href="admin_dashboard.php"><i class="fa-solid fa-gauge"></i> Dashboard</a>
             <a href="admin_manage_students.php"><i class="fa-solid fa-user-graduate"></i> Manage Students</a>
             <a href="admin_manage_teachers.php"><i class="fa-solid fa-chalkboard-user"></i> Manage Teachers</a>
+            <a href="admin_manage_admins.php"><i class="fa-solid fa-user-plus"></i> Manage Admins</a>
             <a href="admin_profile.php"><i class="fa-solid fa-user"></i> Profile</a>
             <a href="admin_logout.php"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
         </nav>
@@ -66,6 +68,10 @@ $totalGroups = $user->countExistingTables(['groups', 'research_groups']);
             <div class="card">
                 <h3>Total Teachers</h3>
                 <p><?= $totalTeachers ?></p>
+            </div>
+            <div class="card card-secondary">
+                <h3>Total Admins</h3>
+                <p><?= $totalAdmins ?></p>
             </div>
             <div class="card card-warning">
                 <h3>Pending Students</h3>

@@ -89,6 +89,51 @@ class User
         return (int) $stmt->fetchColumn();
     }
 
+    public function createAdmin($email, $password, $fullName, $phone)
+    {
+        $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+
+        try {
+            $this->conn->beginTransaction();
+
+            $sql = "INSERT INTO users (email,password,role,is_verified) VALUES (:email,:password,'admin',1)";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([
+                ':email' => $email,
+                ':password' => $hashedPassword
+            ]);
+
+            $userId = $this->conn->lastInsertId();
+
+            $profileSql = "INSERT INTO admin_profiles (user_id,full_name,phone) VALUES (:user_id,:full_name,:phone)";
+            $profileStmt = $this->conn->prepare($profileSql);
+            $profileStmt->execute([
+                ':user_id' => $userId,
+                ':full_name' => $fullName,
+                ':phone' => $phone
+            ]);
+
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            return false;
+        }
+    }
+
+    public function getAdmins()
+    {
+        $sql = "SELECT u.id AS user_id, u.email, u.is_verified, u.created_at AS user_created_at,
+                       ap.full_name, ap.phone, ap.created_at AS profile_created_at
+                FROM users u
+                LEFT JOIN admin_profiles ap ON u.id = ap.user_id
+                WHERE u.role = 'admin'
+                ORDER BY u.id DESC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function countExistingTables(array $tables)
     {
         foreach ($tables as $table) {
