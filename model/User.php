@@ -153,6 +153,49 @@ class User
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function deleteAdminById($adminUserId, $currentAdminUserId)
+    {
+        if ((int) $adminUserId === (int) $currentAdminUserId) {
+            return false;
+        }
+
+        if ($this->countUsersByRole('admin') <= 1) {
+            return false;
+        }
+
+        $roleSql = "SELECT role FROM users WHERE id = :user_id LIMIT 1";
+        $roleStmt = $this->conn->prepare($roleSql);
+        $roleStmt->bindParam(':user_id', $adminUserId, PDO::PARAM_INT);
+        $roleStmt->execute();
+
+        if ($roleStmt->fetchColumn() !== 'admin') {
+            return false;
+        }
+
+        try {
+            $this->conn->beginTransaction();
+
+            $stmt = $this->conn->prepare("DELETE FROM announcements WHERE admin_user_id = :user_id");
+            $stmt->bindParam(':user_id', $adminUserId, PDO::PARAM_INT);
+            $stmt->execute();
+
+            $stmt = $this->conn->prepare("DELETE FROM notifications WHERE user_id = :user_id");
+            $stmt->bindParam(':user_id', $adminUserId, PDO::PARAM_INT);
+            $stmt->execute();
+
+            $stmt = $this->conn->prepare("DELETE FROM users WHERE id = :user_id AND role = 'admin'");
+            $stmt->bindParam(':user_id', $adminUserId, PDO::PARAM_INT);
+            $stmt->execute();
+
+            $deleted = $stmt->rowCount() > 0;
+            $this->conn->commit();
+            return $deleted;
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            return false;
+        }
+    }
+
     public function countExistingTables(array $tables)
     {
         foreach ($tables as $table) {
@@ -165,6 +208,21 @@ class User
             }
         }
         return 0;
+    }
+
+    public function countTotalGroups()
+    {
+        $topicSql = "SELECT COUNT(DISTINCT topic_id)
+                     FROM thesis_topic_applications
+                     WHERE status = 'accepted'";
+        $topicCount = (int) $this->conn->query($topicSql)->fetchColumn();
+
+        $postSql = "SELECT COUNT(DISTINCT post_id)
+                    FROM post_applications
+                    WHERE status = 'accepted'";
+        $postCount = (int) $this->conn->query($postSql)->fetchColumn();
+
+        return $topicCount + $postCount;
     }
 
     public function getPendingStudents()

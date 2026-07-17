@@ -22,7 +22,7 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Announcements | Admin | ThesisConnect</title>
-    <link rel="stylesheet" href="../css/admin_dashboard.css">
+    <link rel="stylesheet" href="../css/admin_dashboard.css?v=20260718c">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 </head>
@@ -62,14 +62,18 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
         <section class="admin-panel-grid">
             <div class="form-card">
                 <h3>Publish Announcement</h3>
-                <form method="POST" action="../control/AuthController.php" class="admin-form js-admin-announcement-form">
+                <form method="POST" action="../control/AuthController.php" class="admin-form announcement-form js-admin-announcement-form">
                     <input type="hidden" name="action" value="announcement_create">
 
-                    <label for="title">Title</label>
-                    <input type="text" id="title" name="title" data-label="Title">
+                    <label for="title">
+                        Title
+                        <input type="text" id="title" name="title" data-label="Title">
+                    </label>
 
-                    <label for="body">Details</label>
-                    <textarea id="body" name="body" rows="8" data-label="Details"></textarea>
+                    <label for="body">
+                        Details
+                        <textarea id="body" name="body" rows="8" data-label="Details"></textarea>
+                    </label>
 
                     <button type="submit" class="action-btn approve add-admin-btn">
                         <i class="fa-solid fa-paper-plane"></i>

@@ -47,13 +47,34 @@ $admin = $user->getAdminProfile($_SESSION['user']['id']);
                 <p>Manage your account information.</p>
             </div>
         </header>
-        <section class="card">
+        <section class="card admin-profile-card">
             <h3>Profile Details</h3>
-            <p><strong>Email:</strong> <?= htmlspecialchars($_SESSION['user']['email']) ?></p>
-            <p><strong>Name:</strong> <?= htmlspecialchars($admin['full_name'] ?? 'Admin User') ?></p>
-            <p><strong>Phone:</strong> <?= htmlspecialchars($admin['phone'] ?? 'Not set') ?></p>
-            <p><strong>Role:</strong> Admin</p>
-            <p><strong>Created At:</strong> <?= htmlspecialchars($admin['created_at'] ?? 'N/A') ?></p>
+            <div class="profile-table-wrap">
+                <table class="profile-detail-table">
+                    <tbody>
+                        <tr>
+                            <th>Email</th>
+                            <td><?= htmlspecialchars($_SESSION['user']['email']) ?></td>
+                        </tr>
+                        <tr>
+                            <th>Name</th>
+                            <td><?= htmlspecialchars($admin['full_name'] ?? 'Admin User') ?></td>
+                        </tr>
+                        <tr>
+                            <th>Phone</th>
+                            <td><?= htmlspecialchars($admin['phone'] ?? 'Not set') ?></td>
+                        </tr>
+                        <tr>
+                            <th>Role</th>
+                            <td>Admin</td>
+                        </tr>
+                        <tr>
+                            <th>Created At</th>
+                            <td><?= htmlspecialchars($admin['created_at'] ?? 'N/A') ?></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </section>
     </main>
 </div>

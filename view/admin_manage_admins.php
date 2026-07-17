@@ -22,7 +22,7 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Admins | Admin | ThesisConnect</title>
-    <link rel="stylesheet" href="../css/admin_dashboard.css">
+    <link rel="stylesheet" href="../css/admin_dashboard.css?v=20260718b">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
 </head>
@@ -65,20 +65,30 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
                 <form method="POST" action="../control/AuthController.php" class="admin-form">
                     <input type="hidden" name="action" value="admin_create">
 
-                    <label for="full_name">Admin Name</label>
-                    <input type="text" id="full_name" name="full_name" placeholder="Enter admin name" required>
+                    <label for="full_name">
+                        Admin Name
+                        <input type="text" id="full_name" name="full_name" placeholder="Enter admin name" required>
+                    </label>
 
-                    <label for="email">Email</label>
-                    <input type="email" id="email" name="email" placeholder="admin@example.com" required>
+                    <label for="email">
+                        Email
+                        <input type="email" id="email" name="email" placeholder="admin@example.com" required>
+                    </label>
 
-                    <label for="phone">Phone</label>
-                    <input type="text" id="phone" name="phone" placeholder="Optional phone number">
+                    <label for="phone">
+                        Phone
+                        <input type="text" id="phone" name="phone" placeholder="Optional phone number">
+                    </label>
 
-                    <label for="password">Password</label>
-                    <input type="password" id="password" name="password" placeholder="At least 8 characters" required>
+                    <label for="password">
+                        Password
+                        <input type="password" id="password" name="password" placeholder="At least 8 characters" required>
+                    </label>
 
-                    <label for="confirm_password">Confirm Password</label>
-                    <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm password" required>
+                    <label for="confirm_password">
+                        Confirm Password
+                        <input type="password" id="confirm_password" name="confirm_password" placeholder="Confirm password" required>
+                    </label>
 
                     <button type="submit" class="action-btn approve add-admin-btn">
                         <i class="fa-solid fa-user-plus"></i>
@@ -102,6 +112,7 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
                                 <th>Email</th>
                                 <th>Phone</th>
                                 <th>Created At</th>
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -112,6 +123,20 @@ unset($_SESSION['admin_success'], $_SESSION['admin_error']);
                                     <td><?= htmlspecialchars($admin['email']) ?></td>
                                     <td><?= htmlspecialchars($admin['phone'] ?? 'Not set') ?></td>
                                     <td><?= htmlspecialchars($admin['profile_created_at'] ?? $admin['user_created_at']) ?></td>
+                                    <td>
+                                        <?php if ((int) $admin['user_id'] !== (int) $_SESSION['user']['id']): ?>
+                                            <form method="POST" action="../control/AuthController.php" onsubmit="return confirm('Delete this admin account?');">
+                                                <input type="hidden" name="action" value="admin_delete">
+                                                <input type="hidden" name="admin_user_id" value="<?= htmlspecialchars($admin['user_id']) ?>">
+                                                <button type="submit" class="action-btn delete">
+                                                    <i class="fa-solid fa-trash"></i>
+                                                    Delete
+                                                </button>
+                                            </form>
+                                        <?php else: ?>
+                                            <span class="admin-self-label">Current</span>
+                                        <?php endif; ?>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>

@@ -61,6 +61,12 @@ switch ($action) {
 
         break;
 
+    case "admin_delete":
+
+        adminDelete($user);
+
+        break;
+
     case "student_profile_update":
 
         studentProfileUpdate($user);
@@ -674,6 +680,27 @@ function adminCreate($user)
     $_SESSION['admin_success'] = 'New admin account created successfully.';
     header('Location: ../view/admin_manage_admins.php');
     exit;
+}
+
+function adminDelete($user)
+{
+    requireAdminSession();
+
+    $adminUserId = (int) ($_POST['admin_user_id'] ?? 0);
+
+    if (!$adminUserId) {
+        redirectWithAdminFlash('../view/admin_manage_admins.php', 'Invalid admin selected.');
+    }
+
+    if ($adminUserId === (int) $_SESSION['user']['id']) {
+        redirectWithAdminFlash('../view/admin_manage_admins.php', 'You cannot delete your own admin account.');
+    }
+
+    if (!$user->deleteAdminById($adminUserId, (int) $_SESSION['user']['id'])) {
+        redirectWithAdminFlash('../view/admin_manage_admins.php', 'Admin account could not be deleted.');
+    }
+
+    redirectWithAdminFlash('../view/admin_manage_admins.php', 'Admin account deleted successfully.', 'success');
 }
 
 function requireStudentSession()

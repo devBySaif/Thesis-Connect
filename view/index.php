@@ -11,7 +11,7 @@
     <title>ThesisConnect</title>
 
     <link rel="stylesheet"
-          href="../css/style.css">
+          href="../css/style.css?v=20260718a">
 
     <!-- Google Font -->
 
@@ -86,16 +86,10 @@
 
         <div class="hero-btn">
 
-            <a href="view/auth/student_register.php">
-
-                Get Started
-
-            </a>
-
-            <a href="view/auth/login.php"
+            <a href="login.php"
                class="login-btn">
 
-                Login
+                Get Started
 
             </a>
 
@@ -105,29 +99,39 @@
 
     <div class="hero-right">
 
-        <div class="dashboard-card">
+        <div class="dashboard-preview">
 
-            <i class="fa-solid fa-chart-line"></i>
+            <img src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=1300&q=85"
+                 alt="Students researching in a campus library">
 
-            <h3>
+            <div class="preview-overlay">
 
-                Dashboard Preview
+                <span>Dashboard Preview</span>
 
-            </h3>
+                <h3>Research teams, topics, and announcements in one place.</h3>
 
-            <p>
+            </div>
 
-                Manage Thesis
+            <div class="preview-stat stat-top">
 
-                <br>
+                <i class="fa-solid fa-users"></i>
 
-                Track Progress
+                <div>
+                    <strong>Group Match</strong>
+                    <small>Find thesis partners faster</small>
+                </div>
 
-                <br>
+            </div>
 
-                Connect with Faculty
+            <div class="preview-stat stat-bottom">
 
-            </p>
+                <i class="fa-solid fa-chalkboard-user"></i>
+
+                <div>
+                    <strong>Faculty Connect</strong>
+                    <small>Work under verified teachers</small>
+                </div>
+            </div>
 
         </div>
 

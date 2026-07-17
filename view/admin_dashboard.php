@@ -18,7 +18,7 @@ $totalAdmins = $user->countUsersByRole('admin');
 $pendingStudents = $user->countPendingUsersByRole('student');
 $pendingTeachers = $user->countPendingUsersByRole('teacher');
 $totalThesisTopics = $user->countExistingTables(['thesis_topics', 'topics']);
-$totalGroups = $user->countExistingTables(['groups', 'research_groups']);
+$totalGroups = $user->countTotalGroups();
 ?>
 <!DOCTYPE html>
 <html lang="en">

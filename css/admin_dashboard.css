@@ -143,6 +143,44 @@ body {
     border: 1px solid #a5b4fc;
 }
 
+.admin-profile-card {
+    max-width: 860px;
+}
+
+.profile-table-wrap {
+    margin-top: 18px;
+    overflow-x: auto;
+}
+
+.profile-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
+
+.profile-detail-table th,
+.profile-detail-table td {
+    border: 1px solid #e5e7eb;
+    padding: 16px 18px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.profile-detail-table th {
+    width: 180px;
+    background: #f8fafc;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 800;
+}
+
+.profile-detail-table td {
+    color: #111827;
+    font-size: 15px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
 .students-table {
     background: #fff;
     border-radius: 24px;
@@ -272,7 +310,7 @@ body {
 
 .admin-panel-grid {
     display: grid;
-    grid-template-columns: minmax(300px, 380px) minmax(0, 1fr);
+    grid-template-columns: 1fr;
     gap: 24px;
     align-items: start;
 }
@@ -288,6 +326,10 @@ body {
     padding: 22px;
 }
 
+.admin-panel-grid > .form-card {
+    max-width: 1040px;
+}
+
 .form-card h3,
 .admins-table h3 {
     color: #111827;
@@ -298,6 +340,22 @@ body {
 .admin-form {
     display: grid;
     gap: 8px;
+}
+
+.admin-panel-grid .admin-form {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px 16px;
+    align-items: end;
+}
+
+.admin-panel-grid .admin-form input,
+.admin-panel-grid .admin-form label {
+    min-width: 0;
+}
+
+.admin-panel-grid .admin-form .add-admin-btn {
+    grid-column: 1 / -1;
+    max-width: 260px;
 }
 
 .admin-form label {
@@ -343,11 +401,12 @@ body {
 
 .admins-table {
     min-width: 0;
-    overflow: hidden;
+    overflow-x: auto;
 }
 
 .admins-table table {
     table-layout: fixed;
+    min-width: 900px;
 }
 
 .admins-table th,
@@ -356,9 +415,13 @@ body {
     white-space: normal;
 }
 
+.admins-table th {
+    white-space: nowrap;
+}
+
 .admins-table th:nth-child(1),
 .admins-table td:nth-child(1) {
-    width: 52px;
+    width: 56px;
 }
 
 .admins-table th:nth-child(2),
@@ -368,26 +431,53 @@ body {
 
 .admins-table th:nth-child(3),
 .admins-table td:nth-child(3) {
-    width: 34%;
+    width: 32%;
 }
 
 .admins-table th:nth-child(4),
 .admins-table td:nth-child(4) {
-    width: 18%;
+    width: 17%;
 }
 
 .admins-table th:nth-child(5),
 .admins-table td:nth-child(5) {
-    width: 24%;
+    width: 22%;
+}
+
+.admins-table th:nth-child(6),
+.admins-table td:nth-child(6) {
+    width: 13%;
 }
 
 .admins-table td:last-child {
-    white-space: normal;
+    white-space: nowrap;
 }
 
 .admins-table td:nth-child(2) {
     color: #4f46e5;
     font-weight: 700;
+}
+
+.admins-table td form {
+    margin: 0;
+}
+
+.admins-table .action-btn {
+    gap: 6px;
+    min-width: 82px;
+}
+
+.admin-self-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #4f46e5;
+    font-size: 12px;
+    font-weight: 800;
+    min-width: 72px;
+    padding: 8px 10px;
 }
 
 .alert.success {
@@ -430,4 +520,131 @@ body {
     .students-table {
         overflow-x: auto;
     }
+
+    .profile-detail-table th {
+        width: 130px;
+    }
+
+    .admin-panel-grid .admin-form {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-panel-grid .admin-form .add-admin-btn {
+        max-width: none;
+    }
+}
+
+/* Manage Admins page polish */
+.admin-manage-main .admin-panel-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+}
+
+.admin-manage-main .form-card,
+.admin-manage-main .admins-table {
+    width: 100%;
+    max-width: none;
+}
+
+.admin-manage-main .admin-form {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+    gap: 16px;
+    align-items: end;
+}
+
+.admin-manage-main .admin-form label {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.admin-manage-main .admin-form input {
+    min-width: 0;
+}
+
+.admin-manage-main .add-admin-btn {
+    grid-column: 1 / -1;
+    max-width: 260px;
+}
+
+.admin-manage-main .admins-table {
+    overflow-x: auto;
+}
+
+.admin-manage-main .admins-table table {
+    min-width: 820px;
+    table-layout: fixed;
+}
+
+.admin-manage-main .admins-table th,
+.admin-manage-main .admins-table td {
+    padding: 14px 12px;
+    vertical-align: middle;
+}
+
+.admin-manage-main .admins-table th:nth-child(1),
+.admin-manage-main .admins-table td:nth-child(1) {
+    width: 54px;
+}
+
+.admin-manage-main .admins-table th:nth-child(2),
+.admin-manage-main .admins-table td:nth-child(2) {
+    width: 18%;
+}
+
+.admin-manage-main .admins-table th:nth-child(3),
+.admin-manage-main .admins-table td:nth-child(3) {
+    width: 32%;
+}
+
+.admin-manage-main .admins-table th:nth-child(4),
+.admin-manage-main .admins-table td:nth-child(4) {
+    width: 16%;
+}
+
+.admin-manage-main .admins-table th:nth-child(5),
+.admin-manage-main .admins-table td:nth-child(5) {
+    width: 20%;
+}
+
+.admin-manage-main .admins-table th:nth-child(6),
+.admin-manage-main .admins-table td:nth-child(6) {
+    width: 110px;
+    white-space: nowrap;
+}
+
+@media (max-width: 900px) {
+    .admin-manage-main .admin-form {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-manage-main .add-admin-btn {
+        max-width: none;
+    }
+}
+
+.announcement-form.admin-form,
+.admin-manage-main .announcement-form.admin-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    max-width: 760px;
+}
+
+.announcement-form label,
+.admin-manage-main .announcement-form label {
+    display: grid;
+    gap: 8px;
+}
+
+.announcement-form textarea {
+    min-height: 180px;
+}
+
+.announcement-form .add-admin-btn,
+.admin-manage-main .announcement-form .add-admin-btn {
+    grid-column: auto;
+    max-width: 220px;
 }
