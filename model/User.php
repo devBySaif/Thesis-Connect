@@ -377,6 +377,37 @@ class User
         ]);
     }
 
+    public function deleteRecruitmentPost($postId, $studentUserId)
+    {
+        try {
+            $this->conn->beginTransaction();
+
+            $deleteApplications = "DELETE pa
+                                   FROM post_applications pa
+                                   JOIN recruitment_posts rp ON pa.post_id = rp.id
+                                   WHERE pa.post_id = :post_id AND rp.student_user_id = :student_user_id";
+            $stmt = $this->conn->prepare($deleteApplications);
+            $stmt->execute([
+                ':post_id' => $postId,
+                ':student_user_id' => $studentUserId
+            ]);
+
+            $deletePost = "DELETE FROM recruitment_posts WHERE id = :post_id AND student_user_id = :student_user_id";
+            $stmt = $this->conn->prepare($deletePost);
+            $stmt->execute([
+                ':post_id' => $postId,
+                ':student_user_id' => $studentUserId
+            ]);
+
+            $deleted = $stmt->rowCount() > 0;
+            $this->conn->commit();
+            return $deleted;
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            return false;
+        }
+    }
+
     public function getRecruitmentPostById($postId)
     {
         $sql = "SELECT rp.*, sp.full_name AS owner_name, sp.profile_picture AS owner_picture,
@@ -447,6 +478,23 @@ class User
         } catch (Exception $e) {
             return false;
         }
+    }
+
+    public function getApplicationForOwner($applicationId, $ownerUserId)
+    {
+        $sql = "SELECT pa.*, rp.title AS post_title, rp.id AS post_id, rp.student_user_id,
+                       sp.full_name AS applicant_name
+                FROM post_applications pa
+                JOIN recruitment_posts rp ON pa.post_id = rp.id
+                JOIN student_profiles sp ON pa.applicant_user_id = sp.user_id
+                WHERE pa.id = :application_id AND rp.student_user_id = :owner_user_id
+                LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([
+            ':application_id' => $applicationId,
+            ':owner_user_id' => $ownerUserId
+        ]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     public function getApplicationsForOwner($ownerUserId)
@@ -543,6 +591,65 @@ class User
         $stmt = $this->conn->prepare($sql);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function createNotification($userId, $title, $body, $linkUrl)
+    {
+        $sql = "INSERT INTO notifications (user_id, title, body, link_url)
+                VALUES (:user_id, :title, :body, :link_url)";
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute([
+            ':user_id' => $userId,
+            ':title' => $title,
+            ':body' => $body,
+            ':link_url' => $linkUrl
+        ]);
+    }
+
+    public function getNotificationsForUser($userId, $limit = 8)
+    {
+        $sql = "SELECT *
+                FROM notifications
+                WHERE user_id = :user_id
+                ORDER BY is_read ASC, created_at DESC
+                LIMIT {$limit}";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function countUnreadNotifications($userId)
+    {
+        $sql = "SELECT COUNT(*) FROM notifications WHERE user_id = :user_id AND is_read = 0";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+        $stmt->execute();
+        return (int) $stmt->fetchColumn();
+    }
+
+    public function readNotification($notificationId, $userId)
+    {
+        $sql = "SELECT link_url FROM notifications WHERE id = :notification_id AND user_id = :user_id LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([
+            ':notification_id' => $notificationId,
+            ':user_id' => $userId
+        ]);
+        $linkUrl = $stmt->fetchColumn();
+
+        if (!$linkUrl) {
+            return false;
+        }
+
+        $updateSql = "UPDATE notifications SET is_read = 1 WHERE id = :notification_id AND user_id = :user_id";
+        $updateStmt = $this->conn->prepare($updateSql);
+        $updateStmt->execute([
+            ':notification_id' => $notificationId,
+            ':user_id' => $userId
+        ]);
+
+        return $linkUrl;
     }
 
     /* ===============================

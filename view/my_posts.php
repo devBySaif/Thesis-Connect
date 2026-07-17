@@ -40,6 +40,10 @@ $user->markApplicationsSeenForOwner((int) $_SESSION['user']['id']);
         <section class="page-heading">
             <h1>My Posts</h1>
             <p>Manage your recruitment posts and review student applications.</p>
+            <a href="add_post.php" class="profile-btn add-post-top">
+                <i class="fa-solid fa-plus"></i>
+                Add Post
+            </a>
         </section>
 
         <?php if (!empty($success)): ?>
@@ -64,7 +68,7 @@ $user->markApplicationsSeenForOwner((int) $_SESSION['user']['id']);
                         </label>
 
                         <label>
-                            Teacher
+                            Thesis Under
                             <select name="teacher_user_id" data-label="Teacher">
                                 <option value="">Select Teacher</option>
                                 <?php foreach ($teachers as $teacher): ?>
@@ -127,7 +131,7 @@ $user->markApplicationsSeenForOwner((int) $_SESSION['user']['id']);
                     </div>
                 <?php else: ?>
                     <?php foreach ($myPosts as $post): ?>
-                        <div class="post-card">
+                        <div class="post-card" id="post-<?= e($post['id']) ?>">
                             <div class="post-body">
                                 <h2><?= e($post['title']) ?></h2>
                                 <p><?= e($post['description']) ?></p>
@@ -135,7 +139,7 @@ $user->markApplicationsSeenForOwner((int) $_SESSION['user']['id']);
 
                             <div class="post-info">
                                 <span><i class="fa-solid fa-building"></i><?= e($post['department']) ?></span>
-                                <span><i class="fa-solid fa-chalkboard-user"></i><?= e($post['teacher_name'] ?: 'Teacher not selected') ?></span>
+                                <span class="teacher-under"><i class="fa-solid fa-chalkboard-user"></i>Thesis under: <?= e($post['teacher_name'] ?: 'Teacher not selected') ?></span>
                                 <span><i class="fa-solid fa-user-group"></i>Need <?= e($post['members_needed']) ?></span>
                                 <span><i class="fa-solid fa-users"></i><?= e($post['apply_count']) ?> applied</span>
                                 <span><i class="fa-solid fa-calendar"></i><?= e($post['deadline']) ?></span>
@@ -144,6 +148,11 @@ $user->markApplicationsSeenForOwner((int) $_SESSION['user']['id']);
 
                             <div class="post-actions split-actions">
                                 <a href="my_posts.php?edit=<?= e($post['id']) ?>" class="apply-btn link-btn">Edit</a>
+                                <form method="POST" action="../control/AuthController.php" class="delete-post-form">
+                                    <input type="hidden" name="action" value="recruitment_post_delete">
+                                    <input type="hidden" name="post_id" value="<?= e($post['id']) ?>">
+                                    <button type="submit" class="apply-btn danger-btn">Delete</button>
+                                </form>
                             </div>
 
                             <div class="applicant-section">
@@ -169,21 +178,26 @@ $user->markApplicationsSeenForOwner((int) $_SESSION['user']['id']);
                                                     <div><dt>CGPA</dt><dd><?= e($application['cgpa']) ?></dd></div>
                                                     <div><dt>Phone</dt><dd><?= e($application['phone']) ?></dd></div>
                                                     <div><dt>Message</dt><dd><?= e($application['message'] ?: 'No message') ?></dd></div>
-                                                    <div><dt>Bio</dt><dd><?= e($application['bio'] ?: 'Not added') ?></dd></div>
                                                 </dl>
                                                 <div class="applicant-actions">
-                                                    <form method="POST" action="../control/AuthController.php">
-                                                        <input type="hidden" name="action" value="post_application_action">
-                                                        <input type="hidden" name="application_id" value="<?= e($application['id']) ?>">
-                                                        <input type="hidden" name="application_status" value="accepted">
-                                                        <button type="submit" class="mini-btn accept">Accept</button>
-                                                    </form>
-                                                    <form method="POST" action="../control/AuthController.php">
-                                                        <input type="hidden" name="action" value="post_application_action">
-                                                        <input type="hidden" name="application_id" value="<?= e($application['id']) ?>">
-                                                        <input type="hidden" name="application_status" value="rejected">
-                                                        <button type="submit" class="mini-btn reject">Reject</button>
-                                                    </form>
+                                                    <?php if ($application['status'] === 'accepted'): ?>
+                                                        <span class="team-badge"><i class="fa-solid fa-user-check"></i> Now in your team</span>
+                                                    <?php elseif ($application['status'] === 'rejected'): ?>
+                                                        <span class="team-badge rejected"><i class="fa-solid fa-circle-xmark"></i> Rejected</span>
+                                                    <?php else: ?>
+                                                        <form method="POST" action="../control/AuthController.php">
+                                                            <input type="hidden" name="action" value="post_application_action">
+                                                            <input type="hidden" name="application_id" value="<?= e($application['id']) ?>">
+                                                            <input type="hidden" name="application_status" value="accepted">
+                                                            <button type="submit" class="mini-btn accept"><i class="fa-solid fa-check"></i> Accept</button>
+                                                        </form>
+                                                        <form method="POST" action="../control/AuthController.php">
+                                                            <input type="hidden" name="action" value="post_application_action">
+                                                            <input type="hidden" name="application_id" value="<?= e($application['id']) ?>">
+                                                            <input type="hidden" name="application_status" value="rejected">
+                                                            <button type="submit" class="mini-btn reject"><i class="fa-solid fa-xmark"></i> Reject</button>
+                                                        </form>
+                                                    <?php endif; ?>
                                                 </div>
                                             </article>
                                         <?php endforeach; ?>

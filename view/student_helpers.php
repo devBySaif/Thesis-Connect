@@ -44,7 +44,7 @@ function loadStudentContext()
         exit;
     }
 
-    $notifications = array_slice($user->getApplicationsForOwner((int) $_SESSION['user']['id']), 0, 5);
+    $notifications = $user->getNotificationsForUser((int) $_SESSION['user']['id'], 8);
 
     return [
         'user' => $user,
@@ -52,7 +52,7 @@ function loadStudentContext()
         'studentName' => $student['full_name'] ?? 'Student',
         'studentId' => $student['student_id'] ?? '',
         'profileImage' => buildProfileImage($student),
-        'notificationCount' => $user->countUnseenApplicationsForOwner((int) $_SESSION['user']['id']),
+        'notificationCount' => $user->countUnreadNotifications((int) $_SESSION['user']['id']),
         'notifications' => $notifications,
         'success' => $_SESSION['student_success'] ?? '',
         'error' => $_SESSION['student_error'] ?? ''
@@ -74,16 +74,16 @@ function renderStudentNavbar($active, $studentName, $studentId, $profileImage, $
 ?>
     <header class="navbar">
         <div class="logo">
-            <a href="student_dashboard.php">
+            <a href="create_post.php">
+                <span class="brand-mark">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </span>
                 <h2>ThesisConnect</h2>
             </a>
         </div>
 
         <nav class="nav-links">
-            <a href="student_dashboard.php" class="<?= $active === 'dashboard' ? 'active' : '' ?>">Dashboard</a>
-            <a href="browse_topics.php" class="<?= $active === 'browse' ? 'active' : '' ?>">Browse Topics</a>
             <a href="create_post.php" class="<?= $active === 'recruitment' ? 'active' : '' ?>">Recruitment Posts</a>
-            <a href="my_posts.php" class="<?= $active === 'my_posts' ? 'active' : '' ?>">My Posts</a>
             <a href="announcements.php" class="<?= $active === 'announcements' ? 'active' : '' ?>">Announcements</a>
         </nav>
 
@@ -109,13 +109,14 @@ function renderStudentNavbar($active, $studentName, $studentId, $profileImage, $
                             </div>
                         <?php else: ?>
                             <?php foreach ($notifications as $notification): ?>
-                                <div class="notification-item">
+                                <a class="notification-item <?= (int) $notification['is_read'] === 0 ? 'unread' : '' ?>" href="notification_go.php?id=<?= e($notification['id']) ?>">
                                     <i class="fa-solid fa-user-plus"></i>
                                     <div>
-                                        <p><?= e($notification['full_name']) ?> applied to <?= e($notification['post_title']) ?>.</p>
+                                        <p><?= e($notification['title']) ?></p>
+                                        <small><?= e($notification['body']) ?></small>
                                         <small><?= e($notification['created_at']) ?></small>
                                     </div>
-                                </div>
+                                </a>
                             <?php endforeach; ?>
                         <?php endif; ?>
                     </div>

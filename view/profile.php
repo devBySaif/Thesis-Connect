@@ -62,14 +62,15 @@ $semesters = ['1st Semester', '2nd Semester', '3rd Semester', '4th Semester', '5
 <body>
     <header class="navbar">
         <div class="logo">
-            <a href="student_dashboard.php">
+            <a href="create_post.php">
+                <span class="brand-mark">
+                    <i class="fa-solid fa-graduation-cap"></i>
+                </span>
                 <h2>ThesisConnect</h2>
             </a>
         </div>
 
         <nav class="nav-links">
-            <a href="student_dashboard.php">Dashboard</a>
-            <a href="browse_topics.php">Browse Topics</a>
             <a href="create_post.php">Recruitment Post</a>
             <a href="announcements.php">Announcements</a>
         </nav>

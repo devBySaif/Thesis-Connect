@@ -85,6 +85,12 @@ switch ($action) {
 
         break;
 
+    case "recruitment_post_delete":
+
+        recruitmentPostDelete($user);
+
+        break;
+
     case "post_application_action":
 
         postApplicationAction($user);
@@ -148,7 +154,7 @@ function loginUser($user)
             'is_verified' => $userRow['is_verified']
         ];
 
-        header('Location: ../view/student_dashboard.php');
+        header('Location: ../view/create_post.php');
         exit;
     }
 
@@ -797,7 +803,7 @@ function recruitmentPostSave($user)
     $membersNeeded = (int) ($_POST['members_needed'] ?? 0);
     $deadline = trim($_POST['deadline'] ?? '');
     $status = trim($_POST['status'] ?? 'open');
-    $redirect = $postId ? '../view/my_posts.php?edit=' . $postId : '../view/create_post.php';
+    $redirect = $postId ? '../view/my_posts.php?edit=' . $postId : '../view/add_post.php';
 
     if ($title === '' || $description === '' || $department === '' || $membersNeeded < 1 || $deadline === '') {
         redirectWithStudentFlash($redirect, 'Please fill title, description, department, members needed, and deadline.');
@@ -849,11 +855,44 @@ function postApply($user)
         redirectWithStudentFlash('../view/create_post.php', 'Invalid post selected.');
     }
 
+    if ($message === '') {
+        redirectWithStudentFlash('../view/create_post.php', 'Please write a short application message.');
+    }
+
+    $post = $user->getRecruitmentPostById($postId);
+
     if (!$user->applyToRecruitmentPost($postId, (int) $_SESSION['user']['id'], $message)) {
         redirectWithStudentFlash('../view/create_post.php', 'Could not apply. You may have already applied, own the post, or the deadline has passed.');
     }
 
+    $student = $user->getStudentProfile((int) $_SESSION['user']['id']);
+    if ($post) {
+        $user->createNotification(
+            (int) $post['student_user_id'],
+            'New application received',
+            ($student['full_name'] ?? 'A student') . ' applied to your post: ' . $post['title'],
+            'my_posts.php#post-' . $postId
+        );
+    }
+
     redirectWithStudentFlash('../view/create_post.php', 'Application submitted successfully.', 'success');
+}
+
+function recruitmentPostDelete($user)
+{
+    requireStudentSession();
+
+    $postId = (int) ($_POST['post_id'] ?? 0);
+
+    if (!$postId) {
+        redirectWithStudentFlash('../view/my_posts.php', 'Invalid post selected.');
+    }
+
+    if (!$user->deleteRecruitmentPost($postId, (int) $_SESSION['user']['id'])) {
+        redirectWithStudentFlash('../view/my_posts.php', 'Post could not be deleted.');
+    }
+
+    redirectWithStudentFlash('../view/my_posts.php', 'Post and its applicants deleted successfully.', 'success');
 }
 
 function postApplicationAction($user)
@@ -867,8 +906,21 @@ function postApplicationAction($user)
         redirectWithStudentFlash('../view/my_posts.php', 'Invalid application action.');
     }
 
+    $application = $user->getApplicationForOwner($applicationId, (int) $_SESSION['user']['id']);
+
     if (!$user->updateApplicationStatus($applicationId, (int) $_SESSION['user']['id'], $status)) {
         redirectWithStudentFlash('../view/my_posts.php', 'Application status could not be updated.');
+    }
+
+    if ($application) {
+        $user->createNotification(
+            (int) $application['applicant_user_id'],
+            $status === 'accepted' ? 'Application accepted' : 'Application rejected',
+            $status === 'accepted'
+                ? 'Your application for "' . $application['post_title'] . '" was accepted. The post owner will contact you as soon as possible.'
+                : 'Your application for "' . $application['post_title'] . '" was rejected.',
+            'create_post.php#post-' . $application['post_id']
+        );
     }
 
     redirectWithStudentFlash('../view/my_posts.php', 'Application ' . $status . ' successfully.', 'success');

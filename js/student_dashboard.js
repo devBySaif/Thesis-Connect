@@ -114,6 +114,14 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    document.querySelectorAll(".delete-post-form").forEach(form => {
+        form.addEventListener("submit", (event) => {
+            if (!confirm("Delete this post and all applicants?")) {
+                event.preventDefault();
+            }
+        });
+    });
+
 
 
     /*=====================================================

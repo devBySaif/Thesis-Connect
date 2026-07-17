@@ -57,7 +57,7 @@ $announcements = $user->getAnnouncements(3);
                     </label>
 
                     <label>
-                        Teacher
+                        Thesis Under
                         <select name="teacher_user_id" data-label="Teacher">
                             <option value="">Select Teacher</option>
                             <?php foreach ($teachers as $teacher): ?>
@@ -132,7 +132,7 @@ $announcements = $user->getAnnouncements(3);
 
                             <div class="post-info">
                                 <span><i class="fa-solid fa-building"></i><?= e($post['department']) ?></span>
-                                <span><i class="fa-solid fa-chalkboard-user"></i><?= e($post['teacher_name'] ?: 'Teacher not selected') ?></span>
+                                <span class="teacher-under"><i class="fa-solid fa-chalkboard-user"></i>Thesis under: <?= e($post['teacher_name'] ?: 'Teacher not selected') ?></span>
                                 <span><i class="fa-solid fa-user-group"></i>Need <?= e($post['members_needed']) ?></span>
                                 <span><i class="fa-solid fa-users"></i><?= e($post['apply_count']) ?> applied</span>
                                 <span><i class="fa-solid fa-calendar"></i><?= e($post['deadline']) ?></span>
@@ -142,7 +142,12 @@ $announcements = $user->getAnnouncements(3);
                                 <?php if ($isOwner): ?>
                                     <a href="my_posts.php" class="apply-btn link-btn">My Post</a>
                                 <?php elseif (!empty($post['my_status'])): ?>
-                                    <button class="apply-btn applied" type="button" disabled><?= e(ucfirst($post['my_status'])) ?></button>
+                                    <div class="application-status-box <?= e($post['my_status']) ?>">
+                                        <button class="apply-btn applied" type="button" disabled><?= e(ucfirst($post['my_status'])) ?></button>
+                                        <?php if ($post['my_status'] === 'accepted'): ?>
+                                            <p>The post owner will contact you as soon as possible.</p>
+                                        <?php endif; ?>
+                                    </div>
                                 <?php elseif ($expired || $post['status'] === 'closed'): ?>
                                     <button class="apply-btn expired" type="button" disabled>Deadline Ended</button>
                                 <?php else: ?>
