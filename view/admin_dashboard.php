@@ -42,6 +42,7 @@ $totalGroups = $user->countExistingTables(['groups', 'research_groups']);
             <a href="admin_manage_students.php"><i class="fa-solid fa-user-graduate"></i> Manage Students</a>
             <a href="admin_manage_teachers.php"><i class="fa-solid fa-chalkboard-user"></i> Manage Teachers</a>
             <a href="admin_manage_admins.php"><i class="fa-solid fa-user-plus"></i> Manage Admins</a>
+            <a href="admin_announcements.php"><i class="fa-solid fa-bullhorn"></i> Announcements</a>
             <a href="admin_profile.php"><i class="fa-solid fa-user"></i> Profile</a>
             <a href="admin_logout.php"><i class="fa-solid fa-right-from-bracket"></i> Logout</a>
         </nav>

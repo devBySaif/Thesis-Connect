@@ -180,6 +180,18 @@ class User
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function getVerifiedTeachers()
+    {
+        $sql = "SELECT u.id AS user_id, u.email, tp.full_name, tp.designation, tp.department
+                FROM users u
+                JOIN teacher_profiles tp ON u.id = tp.user_id
+                WHERE u.role = 'teacher' AND u.is_verified = 1
+                ORDER BY tp.full_name ASC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     public function updateUserVerification($userId, $status)
     {
         $sql = "UPDATE users SET is_verified = :status WHERE id = :user_id";
@@ -320,6 +332,217 @@ class User
             ':password' => $hashedPassword,
             ':user_id' => $userId
         ]);
+    }
+
+    public function createRecruitmentPost(array $data)
+    {
+        $sql = "INSERT INTO recruitment_posts
+                (student_user_id, teacher_user_id, title, description, department, members_needed, deadline, status)
+                VALUES
+                (:student_user_id, :teacher_user_id, :title, :description, :department, :members_needed, :deadline, 'open')";
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute([
+            ':student_user_id' => $data['student_user_id'],
+            ':teacher_user_id' => $data['teacher_user_id'] ?: null,
+            ':title' => $data['title'],
+            ':description' => $data['description'],
+            ':department' => $data['department'],
+            ':members_needed' => $data['members_needed'],
+            ':deadline' => $data['deadline']
+        ]);
+    }
+
+    public function updateRecruitmentPost($postId, $studentUserId, array $data)
+    {
+        $sql = "UPDATE recruitment_posts
+                SET teacher_user_id = :teacher_user_id,
+                    title = :title,
+                    description = :description,
+                    department = :department,
+                    members_needed = :members_needed,
+                    deadline = :deadline,
+                    status = :status
+                WHERE id = :post_id AND student_user_id = :student_user_id";
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute([
+            ':teacher_user_id' => $data['teacher_user_id'] ?: null,
+            ':title' => $data['title'],
+            ':description' => $data['description'],
+            ':department' => $data['department'],
+            ':members_needed' => $data['members_needed'],
+            ':deadline' => $data['deadline'],
+            ':status' => $data['status'],
+            ':post_id' => $postId,
+            ':student_user_id' => $studentUserId
+        ]);
+    }
+
+    public function getRecruitmentPostById($postId)
+    {
+        $sql = "SELECT rp.*, sp.full_name AS owner_name, sp.profile_picture AS owner_picture,
+                       tp.full_name AS teacher_name
+                FROM recruitment_posts rp
+                JOIN student_profiles sp ON rp.student_user_id = sp.user_id
+                LEFT JOIN teacher_profiles tp ON rp.teacher_user_id = tp.user_id
+                WHERE rp.id = :post_id
+                LIMIT 1";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':post_id', $postId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    public function getRecentRecruitmentPosts($viewerUserId = 0, $limit = 20)
+    {
+        $sql = "SELECT rp.*, sp.full_name AS owner_name, sp.profile_picture AS owner_picture,
+                       tp.full_name AS teacher_name,
+                       COUNT(pa.id) AS apply_count,
+                       my_app.status AS my_status
+                FROM recruitment_posts rp
+                JOIN student_profiles sp ON rp.student_user_id = sp.user_id
+                LEFT JOIN teacher_profiles tp ON rp.teacher_user_id = tp.user_id
+                LEFT JOIN post_applications pa ON rp.id = pa.post_id
+                LEFT JOIN post_applications my_app
+                    ON rp.id = my_app.post_id AND my_app.applicant_user_id = :viewer_user_id
+                GROUP BY rp.id, my_app.status
+                ORDER BY rp.created_at DESC
+                LIMIT {$limit}";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':viewer_user_id', $viewerUserId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getMyRecruitmentPosts($studentUserId)
+    {
+        $sql = "SELECT rp.*, tp.full_name AS teacher_name, COUNT(pa.id) AS apply_count
+                FROM recruitment_posts rp
+                LEFT JOIN teacher_profiles tp ON rp.teacher_user_id = tp.user_id
+                LEFT JOIN post_applications pa ON rp.id = pa.post_id
+                WHERE rp.student_user_id = :student_user_id
+                GROUP BY rp.id
+                ORDER BY rp.created_at DESC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':student_user_id', $studentUserId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function applyToRecruitmentPost($postId, $applicantUserId, $message)
+    {
+        $post = $this->getRecruitmentPostById($postId);
+        if (!$post || (int) $post['student_user_id'] === (int) $applicantUserId || strtotime($post['deadline']) < strtotime(date('Y-m-d'))) {
+            return false;
+        }
+
+        $sql = "INSERT INTO post_applications (post_id, applicant_user_id, message)
+                VALUES (:post_id, :applicant_user_id, :message)";
+        $stmt = $this->conn->prepare($sql);
+        try {
+            return $stmt->execute([
+                ':post_id' => $postId,
+                ':applicant_user_id' => $applicantUserId,
+                ':message' => $message
+            ]);
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    public function getApplicationsForOwner($ownerUserId)
+    {
+        $sql = "SELECT pa.*, rp.title AS post_title, rp.id AS post_id,
+                       u.email,
+                       sp.full_name, sp.student_id, sp.department, sp.semester, sp.cgpa, sp.phone, sp.profile_picture, sp.bio
+                FROM post_applications pa
+                JOIN recruitment_posts rp ON pa.post_id = rp.id
+                JOIN users u ON pa.applicant_user_id = u.id
+                JOIN student_profiles sp ON pa.applicant_user_id = sp.user_id
+                WHERE rp.student_user_id = :owner_user_id
+                ORDER BY pa.created_at DESC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':owner_user_id', $ownerUserId, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function getApplicationsForPost($postId, $ownerUserId)
+    {
+        $sql = "SELECT pa.*, u.email,
+                       sp.full_name, sp.student_id, sp.department, sp.semester, sp.cgpa, sp.phone, sp.profile_picture, sp.bio
+                FROM post_applications pa
+                JOIN recruitment_posts rp ON pa.post_id = rp.id
+                JOIN users u ON pa.applicant_user_id = u.id
+                JOIN student_profiles sp ON pa.applicant_user_id = sp.user_id
+                WHERE pa.post_id = :post_id AND rp.student_user_id = :owner_user_id
+                ORDER BY pa.created_at DESC";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute([
+            ':post_id' => $postId,
+            ':owner_user_id' => $ownerUserId
+        ]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    public function updateApplicationStatus($applicationId, $ownerUserId, $status)
+    {
+        $sql = "UPDATE post_applications pa
+                JOIN recruitment_posts rp ON pa.post_id = rp.id
+                SET pa.status = :status, pa.is_seen = 1
+                WHERE pa.id = :application_id AND rp.student_user_id = :owner_user_id";
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute([
+            ':status' => $status,
+            ':application_id' => $applicationId,
+            ':owner_user_id' => $ownerUserId
+        ]);
+    }
+
+    public function countUnseenApplicationsForOwner($ownerUserId)
+    {
+        $sql = "SELECT COUNT(*)
+                FROM post_applications pa
+                JOIN recruitment_posts rp ON pa.post_id = rp.id
+                WHERE rp.student_user_id = :owner_user_id AND pa.is_seen = 0";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':owner_user_id', $ownerUserId, PDO::PARAM_INT);
+        $stmt->execute();
+        return (int) $stmt->fetchColumn();
+    }
+
+    public function markApplicationsSeenForOwner($ownerUserId)
+    {
+        $sql = "UPDATE post_applications pa
+                JOIN recruitment_posts rp ON pa.post_id = rp.id
+                SET pa.is_seen = 1
+                WHERE rp.student_user_id = :owner_user_id";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':owner_user_id', $ownerUserId, PDO::PARAM_INT);
+        return $stmt->execute();
+    }
+
+    public function createAnnouncement($adminUserId, $title, $body)
+    {
+        $sql = "INSERT INTO announcements (admin_user_id, title, body)
+                VALUES (:admin_user_id, :title, :body)";
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute([
+            ':admin_user_id' => $adminUserId,
+            ':title' => $title,
+            ':body' => $body
+        ]);
+    }
+
+    public function getAnnouncements($limit = 20)
+    {
+        $sql = "SELECT a.*, u.email AS admin_email
+                FROM announcements a
+                JOIN users u ON a.admin_user_id = u.id
+                ORDER BY a.created_at DESC
+                LIMIT {$limit}";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /* ===============================

@@ -306,7 +306,8 @@ body {
     font-weight: 600;
 }
 
-.admin-form input {
+.admin-form input,
+.admin-form textarea {
     width: 100%;
     border: 1px solid #d1d5db;
     border-radius: 12px;
@@ -316,7 +317,12 @@ body {
     outline: none;
 }
 
-.admin-form input:focus {
+.admin-form textarea {
+    resize: vertical;
+}
+
+.admin-form input:focus,
+.admin-form textarea:focus {
     border-color: #2563eb;
     box-shadow: 0 0 0 3px rgba(37,99,235,.12);
 }

@@ -73,6 +73,30 @@ switch ($action) {
 
         break;
 
+    case "recruitment_post_save":
+
+        recruitmentPostSave($user);
+
+        break;
+
+    case "post_apply":
+
+        postApply($user);
+
+        break;
+
+    case "post_application_action":
+
+        postApplicationAction($user);
+
+        break;
+
+    case "announcement_create":
+
+        announcementCreate($user);
+
+        break;
+
     default:
 
         echo json_encode([
@@ -605,6 +629,28 @@ function requireStudentSession()
     }
 }
 
+function requireAdminSession()
+{
+    if (empty($_SESSION['user']) || $_SESSION['user']['role'] !== 'admin') {
+        header('Location: ../view/login.php');
+        exit;
+    }
+}
+
+function redirectWithStudentFlash($location, $message, $type = 'error')
+{
+    $_SESSION[$type === 'success' ? 'student_success' : 'student_error'] = $message;
+    header('Location: ' . $location);
+    exit;
+}
+
+function redirectWithAdminFlash($location, $message, $type = 'error')
+{
+    $_SESSION[$type === 'success' ? 'admin_success' : 'admin_error'] = $message;
+    header('Location: ' . $location);
+    exit;
+}
+
 function redirectStudentProfile($message, $type = 'error')
 {
     $_SESSION[$type === 'success' ? 'student_profile_success' : 'student_profile_error'] = $message;
@@ -736,4 +782,112 @@ function studentPasswordUpdate($user)
     }
 
     redirectStudentProfile('Password updated successfully.', 'success');
+}
+
+function recruitmentPostSave($user)
+{
+    requireStudentSession();
+
+    $studentUserId = (int) $_SESSION['user']['id'];
+    $postId = (int) ($_POST['post_id'] ?? 0);
+    $title = trim($_POST['title'] ?? '');
+    $description = trim($_POST['description'] ?? '');
+    $department = trim($_POST['department'] ?? '');
+    $teacherUserId = (int) ($_POST['teacher_user_id'] ?? 0);
+    $membersNeeded = (int) ($_POST['members_needed'] ?? 0);
+    $deadline = trim($_POST['deadline'] ?? '');
+    $status = trim($_POST['status'] ?? 'open');
+    $redirect = $postId ? '../view/my_posts.php?edit=' . $postId : '../view/create_post.php';
+
+    if ($title === '' || $description === '' || $department === '' || $membersNeeded < 1 || $deadline === '') {
+        redirectWithStudentFlash($redirect, 'Please fill title, description, department, members needed, and deadline.');
+    }
+
+    $deadlineTime = strtotime($deadline);
+    if (!$deadlineTime) {
+        redirectWithStudentFlash($redirect, 'Please select a valid deadline.');
+    }
+
+    if (!$postId && $deadlineTime < strtotime(date('Y-m-d'))) {
+        redirectWithStudentFlash($redirect, 'Deadline cannot be in the past.');
+    }
+
+    if (!in_array($status, ['open', 'closed'], true)) {
+        $status = 'open';
+    }
+
+    $data = [
+        'student_user_id' => $studentUserId,
+        'teacher_user_id' => $teacherUserId,
+        'title' => $title,
+        'description' => $description,
+        'department' => $department,
+        'members_needed' => $membersNeeded,
+        'deadline' => date('Y-m-d', $deadlineTime),
+        'status' => $status
+    ];
+
+    $saved = $postId
+        ? $user->updateRecruitmentPost($postId, $studentUserId, $data)
+        : $user->createRecruitmentPost($data);
+
+    if (!$saved) {
+        redirectWithStudentFlash($redirect, 'Post could not be saved.');
+    }
+
+    redirectWithStudentFlash('../view/my_posts.php', $postId ? 'Post updated successfully.' : 'Post created successfully.', 'success');
+}
+
+function postApply($user)
+{
+    requireStudentSession();
+
+    $postId = (int) ($_POST['post_id'] ?? 0);
+    $message = trim($_POST['message'] ?? '');
+
+    if (!$postId) {
+        redirectWithStudentFlash('../view/create_post.php', 'Invalid post selected.');
+    }
+
+    if (!$user->applyToRecruitmentPost($postId, (int) $_SESSION['user']['id'], $message)) {
+        redirectWithStudentFlash('../view/create_post.php', 'Could not apply. You may have already applied, own the post, or the deadline has passed.');
+    }
+
+    redirectWithStudentFlash('../view/create_post.php', 'Application submitted successfully.', 'success');
+}
+
+function postApplicationAction($user)
+{
+    requireStudentSession();
+
+    $applicationId = (int) ($_POST['application_id'] ?? 0);
+    $status = trim($_POST['application_status'] ?? '');
+
+    if (!$applicationId || !in_array($status, ['accepted', 'rejected'], true)) {
+        redirectWithStudentFlash('../view/my_posts.php', 'Invalid application action.');
+    }
+
+    if (!$user->updateApplicationStatus($applicationId, (int) $_SESSION['user']['id'], $status)) {
+        redirectWithStudentFlash('../view/my_posts.php', 'Application status could not be updated.');
+    }
+
+    redirectWithStudentFlash('../view/my_posts.php', 'Application ' . $status . ' successfully.', 'success');
+}
+
+function announcementCreate($user)
+{
+    requireAdminSession();
+
+    $title = trim($_POST['title'] ?? '');
+    $body = trim($_POST['body'] ?? '');
+
+    if ($title === '' || $body === '') {
+        redirectWithAdminFlash('../view/admin_announcements.php', 'Please fill announcement title and details.');
+    }
+
+    if (!$user->createAnnouncement((int) $_SESSION['user']['id'], $title, $body)) {
+        redirectWithAdminFlash('../view/admin_announcements.php', 'Announcement could not be published.');
+    }
+
+    redirectWithAdminFlash('../view/admin_announcements.php', 'Announcement published successfully.', 'success');
 }
