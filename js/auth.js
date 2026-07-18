@@ -1,5 +1,97 @@
 document.addEventListener("DOMContentLoaded", () => {
 
+    // =====================
+    // Forgot Password Modal
+    // =====================
+    
+    const modal = document.getElementById("forgotPasswordModal");
+    const forgotPasswordLink = document.getElementById("forgotPasswordLink");
+    const modalCloseBtn = document.getElementById("modalCloseBtn");
+    const forgotPasswordForm = document.getElementById("forgotPasswordForm");
+
+    if (forgotPasswordLink && modal) {
+        forgotPasswordLink.addEventListener("click", (e) => {
+            e.preventDefault();
+            modal.classList.add("show");
+        });
+    }
+
+    if (modalCloseBtn && modal) {
+        modalCloseBtn.addEventListener("click", () => {
+            modal.classList.remove("show");
+            resetForgotPasswordForm();
+        });
+    }
+
+    if (modal) {
+        window.addEventListener("click", (e) => {
+            if (e.target === modal) {
+                modal.classList.remove("show");
+                resetForgotPasswordForm();
+            }
+        });
+    }
+
+    const resetForgotPasswordForm = () => {
+        if (forgotPasswordForm) {
+            forgotPasswordForm.reset();
+            document.getElementById("forgotErrorMessage").style.display = "none";
+            document.getElementById("forgotSuccessMessage").style.display = "none";
+        }
+    };
+
+    if (forgotPasswordForm) {
+        forgotPasswordForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById("forgotEmail").value.trim();
+            const errorDiv = document.getElementById("forgotErrorMessage");
+            const successDiv = document.getElementById("forgotSuccessMessage");
+
+            if (!email) {
+                errorDiv.textContent = "Please enter your email address.";
+                errorDiv.style.display = "block";
+                successDiv.style.display = "none";
+                return;
+            }
+
+            errorDiv.style.display = "none";
+            successDiv.style.display = "none";
+
+            const formData = new FormData(forgotPasswordForm);
+
+            fetch("../control/AuthController.php", {
+                method: "POST",
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        successDiv.textContent = data.message;
+                        successDiv.style.display = "block";
+                        forgotPasswordForm.reset();
+                        
+                        setTimeout(() => {
+                            modal.classList.remove("show");
+                            resetForgotPasswordForm();
+                        }, 3000);
+                    } else {
+                        errorDiv.textContent = data.message;
+                        errorDiv.style.display = "block";
+                    }
+                })
+                .catch(error => {
+                    console.error(error);
+                    errorDiv.textContent = "An error occurred. Please try again.";
+                    errorDiv.style.display = "block";
+                });
+        });
+    }
+
+    // =====================
+    // Registration Forms
+    // =====================
+
     const forms = [
         {
             id: "studentRegisterForm",

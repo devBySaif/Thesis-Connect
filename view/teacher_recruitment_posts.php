@@ -40,6 +40,11 @@ $departments = ['All', 'CSE', 'EEE', 'BBA'];
                     <span><i class="fa-solid fa-users"></i><?= e($post['apply_count']) ?> applied</span>
                     <span><i class="fa-solid fa-calendar"></i><?= e($post['deadline']) ?></span>
                 </div>
+                <?php if ((int)$post['teacher_user_id'] === (int) $_SESSION['user']['id'] && isset($post['accepted_count']) && (int)$post['accepted_count'] >= (int)$post['members_needed']): ?>
+                    <div class="post-actions" style="flex-wrap:wrap; gap:12px; margin-top:12px;">
+                        <span class="status-label completed-label" style="margin-top:8px;">Group Full</span>
+                    </div>
+                <?php endif; ?>
             </article>
         <?php endforeach; ?>
         <?php if (empty($posts)): ?><div class="post-card"><div class="post-body"><h2>No posts found</h2><p>Try another filter.</p></div></div><?php endif; ?>

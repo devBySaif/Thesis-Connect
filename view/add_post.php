@@ -88,8 +88,50 @@ $teachers = $user->getVerifiedTeachers();
             </form>
         </section>
     </main>
-
     <script src="../js/student_dashboard.js"></script>
+
+    <!-- Confirmation modal (styled inline for simplicity) -->
+    <div id="confirmModal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;z-index:2000;">
+        <div style="position:absolute;inset:0;background:rgba(0,0,0,0.6);"></div>
+        <div style="position:relative;background:#0b1220;color:#fff;padding:20px;border-radius:8px;max-width:520px;width:90%;box-shadow:0 10px 30px rgba(0,0,0,0.6);">
+            <h3 style="margin-top:0">Confirm teacher permission</h3>
+            <p>Are you sure the supervising teacher has given permission for this post? If not, faculty may take action.</p>
+            <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">
+                <button id="confirmCancel" class="profile-btn secondary" style="background:#374151;color:#fff;border:none;padding:8px 12px;border-radius:6px;">Cancel</button>
+                <button id="confirmOk" class="profile-btn" style="background:#6C63FF;color:#fff;border:none;padding:8px 12px;border-radius:6px;">Yes, publish</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const postForm = document.querySelector('.js-post-form');
+            const modal = document.getElementById('confirmModal');
+            const okBtn = document.getElementById('confirmOk');
+            const cancelBtn = document.getElementById('confirmCancel');
+
+            if (!postForm || !modal) return;
+
+            postForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                modal.style.display = 'flex';
+            });
+
+            okBtn.addEventListener('click', function () {
+                modal.style.display = 'none';
+                postForm.submit();
+            });
+
+            cancelBtn.addEventListener('click', function () {
+                modal.style.display = 'none';
+            });
+
+            // close modal on overlay click
+            modal.addEventListener('click', function (ev) {
+                if (ev.target === modal) modal.style.display = 'none';
+            });
+        });
+    </script>
 </body>
 
 </html>

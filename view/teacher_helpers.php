@@ -112,6 +112,7 @@ function renderTeacherNavbar($active, $teacherName, $teacherId, $profileImage, $
                         <li><a href="teacher_my_group.php"><i class="fa-solid fa-people-group"></i> My Group</a></li>
                         <li><a href="teacher_topics.php"><i class="fa-solid fa-lightbulb"></i> Thesis Topics</a></li>
                         <li><a href="teacher_recruitment_posts.php"><i class="fa-solid fa-users"></i> Recruitment Posts</a></li>
+                        <li><a href="other_faculty_groups.php"><i class="fa-solid fa-globe"></i> Other Faculty Groups</a></li>
                         <li><a href="teacher_applications.php"><i class="fa-solid fa-clipboard-check"></i> Applications</a></li>
                         <li><a href="teacher_supervised_students.php"><i class="fa-solid fa-user-graduate"></i> Supervised Students</a></li>
                         <li><a href="teacher_announcements.php"><i class="fa-solid fa-bullhorn"></i> Announcements</a></li>

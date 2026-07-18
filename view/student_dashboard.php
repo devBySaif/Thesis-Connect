@@ -115,6 +115,7 @@ $announcements = $user->getAnnouncements(3);
                         <?php
                         $expired = strtotime($post['deadline']) < strtotime(date('Y-m-d'));
                         $isOwner = (int) $post['student_user_id'] === (int) $_SESSION['user']['id'];
+                        $isFull = isset($post['accepted_count']) && (int)$post['accepted_count'] >= (int)$post['members_needed'];
                         ?>
                         <div class="post-card">
                             <div class="post-top">
@@ -150,14 +151,18 @@ $announcements = $user->getAnnouncements(3);
                                     </div>
                                 <?php elseif ($expired || $post['status'] === 'closed'): ?>
                                     <button class="apply-btn expired" type="button" disabled>Deadline Ended</button>
-                                <?php else: ?>
-                                    <form method="POST" action="../control/AuthController.php" class="inline-apply-form js-apply-form">
-                                        <input type="hidden" name="action" value="post_apply">
-                                        <input type="hidden" name="post_id" value="<?= e($post['id']) ?>">
-                                        <input type="text" name="message" placeholder="Short message" data-label="Application message">
-                                        <button type="submit" class="apply-btn">Apply</button>
-                                    </form>
-                                <?php endif; ?>
+                                    <?php else: ?>
+                                        <?php if ($isFull): ?>
+                                            <button class="apply-btn expired" type="button" disabled>Full</button>
+                                        <?php else: ?>
+                                            <form method="POST" action="../control/AuthController.php" class="inline-apply-form js-apply-form">
+                                                <input type="hidden" name="action" value="post_apply">
+                                                <input type="hidden" name="post_id" value="<?= e($post['id']) ?>">
+                                                <input type="text" name="message" placeholder="Short message" data-label="Application message">
+                                                <button type="submit" class="apply-btn">Apply</button>
+                                            </form>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
                             </div>
                         </div>
                     <?php endforeach; ?>

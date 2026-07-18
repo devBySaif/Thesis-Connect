@@ -71,7 +71,7 @@ $error = $_GET['error'] ?? '';
 
             </div>
 
-            <h2>Welcome Back &#128075;</h2>
+            <h2>Welcome Back </h2>
 
             <span>
                 Login to continue your academic journey
@@ -145,7 +145,7 @@ $error = $_GET['error'] ?? '';
 
         </label>
 
-        <a href="#">Forgot Password?</a>
+        <a href="#" id="forgotPasswordLink">Forgot Password?</a>
 
     </div>
 
@@ -181,6 +181,47 @@ $error = $_GET['error'] ?? '';
     </div>
 
 </div>
+
+<!-- Forgot Password Popup Modal -->
+<div id="forgotPasswordModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Forgot Password</h3>
+            <button type="button" class="modal-close" id="modalCloseBtn">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <p class="modal-subtitle">Enter your email address and we'll send you a link to reset your password.</p>
+            
+            <form id="forgotPasswordForm" method="POST" action="../control/AuthController.php">
+                <input type="hidden" name="action" value="forgot_password">
+                
+                <div id="forgotErrorMessage" class="modal-error" style="display:none;"></div>
+                <div id="forgotSuccessMessage" class="modal-success" style="display:none;"></div>
+                
+                <div class="modal-input-box">
+                    <label for="forgotEmail">Email Address</label>
+                    <div class="modal-input-field">
+                        <i class="fa-solid fa-envelope"></i>
+                        <input
+                            type="email"
+                            id="forgotEmail"
+                            name="email"
+                            placeholder="Enter your email"
+                            required
+                        >
+                    </div>
+                </div>
+
+                <button type="submit" class="modal-btn">Send Reset Link</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="../js/auth.js?v=20260718c"></script>
 
 </body>
 

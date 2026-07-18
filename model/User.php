@@ -506,6 +506,19 @@ class User
         ]);
     }
 
+    public function updateRecruitmentPostCapacity($postId, $teacherUserId, $membersNeeded)
+    {
+        $sql = "UPDATE recruitment_posts
+                SET members_needed = :members_needed
+                WHERE id = :post_id AND teacher_user_id = :teacher_user_id";
+        $stmt = $this->conn->prepare($sql);
+        return $stmt->execute([
+            ':members_needed' => $membersNeeded,
+            ':post_id' => $postId,
+            ':teacher_user_id' => $teacherUserId
+        ]);
+    }
+
     public function deleteRecruitmentPost($postId, $studentUserId)
     {
         try {
@@ -537,6 +550,49 @@ class User
         }
     }
 
+    public function deleteRecruitmentPostByTeacher($postId, $teacherUserId)
+    {
+        try {
+            $this->conn->beginTransaction();
+
+            $deleteApplications = "DELETE pa
+                                   FROM post_applications pa
+                                   JOIN recruitment_posts rp ON pa.post_id = rp.id
+                                   WHERE pa.post_id = :post_id AND rp.teacher_user_id = :teacher_user_id";
+            $stmt = $this->conn->prepare($deleteApplications);
+            $stmt->execute([
+                ':post_id' => $postId,
+                ':teacher_user_id' => $teacherUserId
+            ]);
+
+            $deletePost = "DELETE FROM recruitment_posts WHERE id = :post_id AND teacher_user_id = :teacher_user_id";
+            $stmt = $this->conn->prepare($deletePost);
+            $stmt->execute([
+                ':post_id' => $postId,
+                ':teacher_user_id' => $teacherUserId
+            ]);
+
+            $deleted = $stmt->rowCount() > 0;
+            $this->conn->commit();
+            return $deleted;
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            return false;
+        }
+    }
+
+    public function completeRecruitmentPost($postId, $teacherUserId)
+    {
+        try {
+            $sql = "UPDATE recruitment_posts SET status = 'completed' WHERE id = :post_id AND teacher_user_id = :teacher_user_id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([':post_id' => $postId, ':teacher_user_id' => $teacherUserId]);
+            return $stmt->rowCount() > 0;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
     public function getRecruitmentPostById($postId)
     {
         $sql = "SELECT rp.*, sp.full_name AS owner_name, sp.profile_picture AS owner_picture,
@@ -557,6 +613,7 @@ class User
         $sql = "SELECT rp.*, sp.full_name AS owner_name, sp.profile_picture AS owner_picture,
                        tp.full_name AS teacher_name,
                        COUNT(pa.id) AS apply_count,
+                       SUM(CASE WHEN pa.status = 'accepted' THEN 1 ELSE 0 END) AS accepted_count,
                        my_app.status AS my_status
                 FROM recruitment_posts rp
                 JOIN student_profiles sp ON rp.student_user_id = sp.user_id
@@ -592,6 +649,16 @@ class User
     {
         $post = $this->getRecruitmentPostById($postId);
         if (!$post || (int) $post['student_user_id'] === (int) $applicantUserId || strtotime($post['deadline']) < strtotime(date('Y-m-d'))) {
+            return false;
+        }
+
+        // Check if the required member slots have already been filled
+        $acceptedSql = "SELECT COUNT(*) FROM post_applications WHERE post_id = :post_id AND status = 'accepted'";
+        $acceptedStmt = $this->conn->prepare($acceptedSql);
+        $acceptedStmt->execute([':post_id' => $postId]);
+        $acceptedCount = (int) $acceptedStmt->fetchColumn();
+
+        if ($acceptedCount >= (int) $post['members_needed']) {
             return false;
         }
 
@@ -787,6 +854,7 @@ class User
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $topic) {
             $members = $this->getTopicGroupMembers((int) $topic['id']);
             $groups[] = [
+                'id' => $topic['id'],
                 'type' => 'Thesis Topic',
                 'title' => $topic['title'],
                 'department' => $topic['department'],
@@ -806,7 +874,7 @@ class User
     {
         $groups = [];
 
-        $topicSql = "SELECT tt.id, tt.title, tt.department, tt.research_area,
+        $topicSql = "SELECT tt.id, tt.title, tt.department, tt.research_area, tt.status,
                             tp.full_name AS teacher_name, tp.designation AS teacher_designation,
                             tp.department AS teacher_department
                      FROM thesis_topics tt
@@ -836,7 +904,7 @@ class User
             ];
         }
 
-        $postSql = "SELECT rp.id, rp.title, rp.department,
+        $postSql = "SELECT rp.id, rp.title, rp.department, rp.status,
                            tp.full_name AS teacher_name, tp.designation AS teacher_designation,
                            tp.department AS teacher_department
                     FROM recruitment_posts rp
@@ -849,11 +917,9 @@ class User
 
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $post) {
             $members = $this->getRecruitmentGroupMembers((int) $post['id']);
-            if (count($members) < 2) {
-                continue;
-            }
 
             $groups[] = [
+                'id' => $post['id'],
                 'type' => 'Recruitment Post',
                 'title' => $post['title'],
                 'department' => $post['department'],
@@ -861,6 +927,7 @@ class User
                 'faculty_name' => $post['teacher_name'],
                 'faculty_designation' => $post['teacher_designation'],
                 'faculty_department' => $post['teacher_department'],
+                'status' => $post['status'],
                 'member_count' => count($members),
                 'members' => $members
             ];
@@ -1005,7 +1072,7 @@ class User
         if ($topicId) {
             $sql = "UPDATE thesis_topics
                     SET title = :title, department = :department, research_area = :research_area,
-                        description = :description, status = :status
+                        description = :description, max_members = :max_members, status = :status
                     WHERE id = :topic_id AND teacher_user_id = :teacher_user_id";
             $stmt = $this->conn->prepare($sql);
             return $stmt->execute([
@@ -1013,14 +1080,15 @@ class User
                 ':department' => $data['department'],
                 ':research_area' => $data['research_area'],
                 ':description' => $data['description'],
+                ':max_members' => $data['max_members'],
                 ':status' => $data['status'],
                 ':topic_id' => $topicId,
                 ':teacher_user_id' => $teacherUserId
             ]);
         }
 
-        $sql = "INSERT INTO thesis_topics (teacher_user_id, title, department, research_area, description, status)
-                VALUES (:teacher_user_id, :title, :department, :research_area, :description, :status)";
+        $sql = "INSERT INTO thesis_topics (teacher_user_id, title, department, research_area, description, max_members, status)
+                VALUES (:teacher_user_id, :title, :department, :research_area, :description, :max_members, :status)";
         $stmt = $this->conn->prepare($sql);
         return $stmt->execute([
             ':teacher_user_id' => $teacherUserId,
@@ -1028,6 +1096,7 @@ class User
             ':department' => $data['department'],
             ':research_area' => $data['research_area'],
             ':description' => $data['description'],
+            ':max_members' => $data['max_members'],
             ':status' => $data['status']
         ]);
     }
@@ -1049,12 +1118,28 @@ class User
         }
     }
 
+    public function completeThesisTopic($topicId, $teacherUserId)
+    {
+        try {
+            $sql = "UPDATE thesis_topics SET status = 'completed' WHERE id = :topic_id AND teacher_user_id = :teacher_user_id";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->execute([':topic_id' => $topicId, ':teacher_user_id' => $teacherUserId]);
+            return $stmt->rowCount() > 0;
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
     public function getThesisTopicById($topicId)
     {
-        $sql = "SELECT tt.*, tp.full_name AS teacher_name, tp.designation, tp.profile_picture AS teacher_picture
+        $sql = "SELECT tt.*, tp.full_name AS teacher_name, tp.designation, tp.profile_picture AS teacher_picture,
+                       COALESCE(SUM(CASE WHEN tta.status = 'accepted' THEN 1 ELSE 0 END), 0) AS accepted_count
                 FROM thesis_topics tt
                 JOIN teacher_profiles tp ON tt.teacher_user_id = tp.user_id
-                WHERE tt.id = :topic_id LIMIT 1";
+                LEFT JOIN thesis_topic_applications tta ON tt.id = tta.topic_id
+                WHERE tt.id = :topic_id
+                GROUP BY tt.id
+                LIMIT 1";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam(':topic_id', $topicId, PDO::PARAM_INT);
         $stmt->execute();
@@ -1063,7 +1148,8 @@ class User
 
     public function getTeacherTopics($teacherUserId)
     {
-        $sql = "SELECT tt.*, COUNT(tta.id) AS application_count
+        $sql = "SELECT tt.*, COUNT(tta.id) AS application_count,
+                       COALESCE(SUM(CASE WHEN tta.status = 'accepted' THEN 1 ELSE 0 END), 0) AS accepted_count
                 FROM thesis_topics tt
                 LEFT JOIN thesis_topic_applications tta ON tt.id = tta.topic_id
                 WHERE tt.teacher_user_id = :teacher_user_id
@@ -1078,11 +1164,14 @@ class User
     public function getAllThesisTopics($viewerUserId = 0)
     {
         $sql = "SELECT tt.*, tp.full_name AS teacher_name, tp.designation,
-                       my_app.status AS my_status
+                       my_app.status AS my_status,
+                       COALESCE(SUM(CASE WHEN tta.status = 'accepted' THEN 1 ELSE 0 END), 0) AS accepted_count
                 FROM thesis_topics tt
                 JOIN teacher_profiles tp ON tt.teacher_user_id = tp.user_id
                 LEFT JOIN thesis_topic_applications my_app
                     ON tt.id = my_app.topic_id AND my_app.student_user_id = :viewer_user_id
+                LEFT JOIN thesis_topic_applications tta ON tt.id = tta.topic_id
+                GROUP BY tt.id
                 ORDER BY tt.created_at DESC";
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam(':viewer_user_id', $viewerUserId, PDO::PARAM_INT);
@@ -1093,7 +1182,7 @@ class User
     public function applyToThesisTopic($topicId, $studentUserId, $message)
     {
         $topic = $this->getThesisTopicById($topicId);
-        if (!$topic || $topic['status'] !== 'available') {
+        if (!$topic || $topic['status'] !== 'available' || (int) $topic['accepted_count'] >= (int) $topic['max_members']) {
             return false;
         }
 
@@ -1150,6 +1239,13 @@ class User
                 throw new Exception('Application not found.');
             }
 
+            if ($status === 'accepted') {
+                $topic = $this->getThesisTopicById($app['topic_id']);
+                if (!$topic || (int) $topic['accepted_count'] >= (int) $topic['max_members']) {
+                    throw new Exception('Maximum group capacity reached.');
+                }
+            }
+
             $stmt = $this->conn->prepare("UPDATE thesis_topic_applications tta JOIN thesis_topics tt ON tta.topic_id = tt.id SET tta.status = :status WHERE tta.id = :application_id AND tt.teacher_user_id = :teacher_user_id");
             $stmt->execute([':status' => $status, ':application_id' => $applicationId, ':teacher_user_id' => $teacherUserId]);
 
@@ -1168,14 +1264,27 @@ class User
 
     public function getSupervisedStudents($teacherUserId)
     {
-        $sql = "SELECT tta.status, tt.title AS topic_title,
-                       sp.full_name, sp.student_id, sp.department, sp.cgpa, sp.phone, u.email
-                FROM thesis_topic_applications tta
-                JOIN thesis_topics tt ON tta.topic_id = tt.id
-                JOIN student_profiles sp ON tta.student_user_id = sp.user_id
-                JOIN users u ON tta.student_user_id = u.id
-                WHERE tt.teacher_user_id = :teacher_user_id AND tta.status = 'accepted'
-                ORDER BY sp.full_name ASC";
+        $sql = "(
+                    SELECT tta.status, tt.title AS topic_title,
+                           sp.full_name, sp.student_id, sp.department, sp.cgpa, sp.phone, u.email
+                    FROM thesis_topic_applications tta
+                    JOIN thesis_topics tt ON tta.topic_id = tt.id
+                    JOIN student_profiles sp ON tta.student_user_id = sp.user_id
+                    JOIN users u ON tta.student_user_id = u.id
+                    WHERE tt.teacher_user_id = :teacher_user_id AND tta.status = 'accepted'
+                )
+                UNION
+                (
+                    SELECT pa.status, rp.title AS topic_title,
+                           sp.full_name, sp.student_id, sp.department, sp.cgpa, sp.phone, u.email
+                    FROM post_applications pa
+                    JOIN recruitment_posts rp ON pa.post_id = rp.id
+                    JOIN student_profiles sp ON pa.applicant_user_id = sp.user_id
+                    JOIN users u ON pa.applicant_user_id = u.id
+                    WHERE rp.teacher_user_id = :teacher_user_id AND pa.status = 'accepted'
+                )
+                ORDER BY full_name ASC";
+
         $stmt = $this->conn->prepare($sql);
         $stmt->bindParam(':teacher_user_id', $teacherUserId, PDO::PARAM_INT);
         $stmt->execute();
@@ -1279,4 +1388,139 @@ class User
 
     }
 
+    /* ===============================
+       Password Reset
+    ================================ */
+
+    public function createPasswordResetTable()
+    {
+        $sql = "CREATE TABLE IF NOT EXISTS password_resets (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                reset_token VARCHAR(255) NOT NULL UNIQUE,
+                expires_at DATETIME NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )";
+        
+        try {
+            $this->conn->exec($sql);
+            return true;
+        } catch (PDOException $e) {
+            error_log("Error creating password_resets table: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function generatePasswordResetToken($email)
+    {
+        try {
+            // Check if email exists
+            if (!$this->emailExists($email)) {
+                return false;
+            }
+
+            // Get user ID
+            $userSql = "SELECT id FROM users WHERE email = :email LIMIT 1";
+            $userStmt = $this->conn->prepare($userSql);
+            $userStmt->bindParam(':email', $email);
+            $userStmt->execute();
+            $userRow = $userStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$userRow) {
+                return false;
+            }
+
+            $userId = $userRow['id'];
+
+            // Generate unique token
+            $token = bin2hex(random_bytes(32));
+
+            // Set expiration to 24 hours from now
+            $expiresAt = date('Y-m-d H:i:s', time() + 86400);
+
+            // Delete any existing tokens for this user
+            $deleteSql = "DELETE FROM password_resets WHERE user_id = :user_id";
+            $deleteStmt = $this->conn->prepare($deleteSql);
+            $deleteStmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
+            $deleteStmt->execute();
+
+            // Insert new token
+            $sql = "INSERT INTO password_resets (user_id, reset_token, expires_at)
+                    VALUES (:user_id, :reset_token, :expires_at)";
+            $stmt = $this->conn->prepare($sql);
+            $result = $stmt->execute([
+                ':user_id' => $userId,
+                ':reset_token' => $token,
+                ':expires_at' => $expiresAt
+            ]);
+
+            if (!$result) {
+                error_log("Failed to insert password reset token for user: " . $userId);
+                return false;
+            }
+
+            return $token;
+        } catch (PDOException $e) {
+            error_log("Error in generatePasswordResetToken: " . $e->getMessage());
+            return false;
+        } catch (Exception $e) {
+            error_log("Unexpected error in generatePasswordResetToken: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function validatePasswordResetToken($token)
+    {
+        try {
+            $sql = "SELECT user_id, expires_at FROM password_resets 
+                    WHERE reset_token = :reset_token AND expires_at > NOW()
+                    LIMIT 1";
+            $stmt = $this->conn->prepare($sql);
+            $stmt->bindParam(':reset_token', $token);
+            $stmt->execute();
+
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error validating password reset token: " . $e->getMessage());
+            return false;
+        }
+    }
+
+    public function resetPasswordWithToken($token, $newPassword)
+    {
+        try {
+            // Validate token first
+            $resetData = $this->validatePasswordResetToken($token);
+            if (!$resetData) {
+                return false;
+            }
+
+            $userId = $resetData['user_id'];
+            $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
+
+            $this->conn->beginTransaction();
+
+            // Update password
+            $updateSql = "UPDATE users SET password = :password WHERE id = :user_id";
+            $updateStmt = $this->conn->prepare($updateSql);
+            $updateStmt->execute([
+                ':password' => $hashedPassword,
+                ':user_id' => $userId
+            ]);
+
+            // Delete the token
+            $deleteSql = "DELETE FROM password_resets WHERE reset_token = :reset_token";
+            $deleteStmt = $this->conn->prepare($deleteSql);
+            $deleteStmt->bindParam(':reset_token', $token);
+            $deleteStmt->execute();
+
+            $this->conn->commit();
+            return true;
+        } catch (Exception $e) {
+            $this->conn->rollBack();
+            error_log("Error resetting password: " . $e->getMessage());
+            return false;
+        }
+    }
 }

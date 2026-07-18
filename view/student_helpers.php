@@ -84,6 +84,7 @@ function renderStudentNavbar($active, $studentName, $studentId, $profileImage, $
 
         <nav class="nav-links">
             <a href="create_post.php" class="<?= $active === 'recruitment' ? 'active' : '' ?>">Recruitment Posts</a>
+            <a href="browse_topics.php" class="<?= $active === 'browse_topics' ? 'active' : '' ?>">Browse Topics</a>
             <a href="announcements.php" class="<?= $active === 'announcements' ? 'active' : '' ?>">Announcements</a>
         </nav>
 
@@ -137,7 +138,6 @@ function renderStudentNavbar($active, $studentName, $studentId, $profileImage, $
                         <p id="studentId"><?= e($studentId) ?></p>
                     </div>
                     <ul>
-                        <li><a href="student_dashboard.php"><i class="fa-solid fa-house"></i> Dashboard</a></li>
                         <li><a href="profile.php"><i class="fa-solid fa-user"></i> Profile</a></li>
                         <li><a href="student_my_group.php"><i class="fa-solid fa-people-group"></i> My Group</a></li>
                         <li><a href="browse_topics.php"><i class="fa-solid fa-book-open"></i> Browse Topics</a></li>

@@ -30,6 +30,7 @@ if ($editTopic && (int) $editTopic['teacher_user_id'] !== (int) $_SESSION['user'
                 <label>Title<input type="text" name="title" value="<?= e($editTopic['title'] ?? '') ?>" data-label="Title"></label>
                 <label>Department<input type="text" name="department" value="<?= e($editTopic['department'] ?? $teacher['department']) ?>" data-label="Department"></label>
                 <label>Research Area<input type="text" name="research_area" value="<?= e($editTopic['research_area'] ?? '') ?>" data-label="Research area"></label>
+                <label>Max Members<input type="number" name="max_members" min="1" value="<?= e($editTopic['max_members'] ?? 1) ?>" data-label="Max members"></label>
                 <label>Status<select name="status"><option value="available" <?= ($editTopic['status'] ?? '') === 'available' ? 'selected' : '' ?>>Available</option><option value="assigned" <?= ($editTopic['status'] ?? '') === 'assigned' ? 'selected' : '' ?>>Assigned</option></select></label>
             </div>
             <label>Description<textarea name="description" rows="4"><?= e($editTopic['description'] ?? '') ?></textarea></label>
@@ -44,9 +45,15 @@ if ($editTopic && (int) $editTopic['teacher_user_id'] !== (int) $_SESSION['user'
                 <div class="post-info">
                     <span><i class="fa-solid fa-building"></i><?= e($topic['department']) ?></span>
                     <span><i class="fa-solid fa-magnifying-glass-chart"></i><?= e($topic['research_area']) ?></span>
+                    <span><i class="fa-solid fa-user-group"></i>Max <?= e($topic['max_members'] ?? 1) ?></span>
                     <span><i class="fa-solid fa-circle"></i><?= e(ucfirst($topic['status'])) ?></span>
                     <span><i class="fa-solid fa-users"></i><?= e($topic['application_count']) ?> applications</span>
                 </div>
+                <?php if (isset($topic['accepted_count']) && (int)$topic['accepted_count'] >= (int)$topic['max_members']): ?>
+                    <div class="post-actions" style="margin-top:8px;">
+                        <span class="status-label completed-label">Full</span>
+                    </div>
+                <?php endif; ?>
                 <div class="post-actions split-actions">
                     <a href="teacher_topics.php?edit=<?= e($topic['id']) ?>" class="apply-btn link-btn">Edit</a>
                     <form method="POST" action="../control/AuthController.php" class="delete-post-form">

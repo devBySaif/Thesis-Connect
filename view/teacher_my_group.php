@@ -63,6 +63,53 @@ $groups = $user->getTeacherGroups((int) $_SESSION['user']['id']);
                         </article>
                     <?php endforeach; ?>
                 </div>
+                <div class="group-actions">
+                    <?php if ($group['type'] === 'Recruitment Post' && !empty($group['title'])): ?>
+                        <?php if (!empty($group['status']) && $group['status'] === 'completed'): ?>
+                            <span class="status-label completed-label">Completed</span>
+                            <form method="POST" action="../control/AuthController.php" onsubmit="return confirm('Delete this recruitment group? This cannot be undone.');">
+                                <input type="hidden" name="action" value="teacher_delete_post">
+                                <input type="hidden" name="post_id" value="<?= e($group['id'] ?? '') ?>">
+                                <button type="submit" class="apply-btn danger-btn">Delete</button>
+                            </form>
+                        <?php else: ?>
+                            <div style="display:flex;gap:8px;">
+                                <form method="POST" action="../control/AuthController.php" onsubmit="return confirm('Mark this recruitment group as completed?');">
+                                    <input type="hidden" name="action" value="teacher_complete_post">
+                                    <input type="hidden" name="post_id" value="<?= e($group['id'] ?? '') ?>">
+                                    <button type="submit" class="apply-btn applied">Complete</button>
+                                </form>
+                                <form method="POST" action="../control/AuthController.php" onsubmit="return confirm('Delete this recruitment group? This cannot be undone.');">
+                                    <input type="hidden" name="action" value="teacher_delete_post">
+                                    <input type="hidden" name="post_id" value="<?= e($group['id'] ?? '') ?>">
+                                    <button type="submit" class="apply-btn danger-btn">Delete</button>
+                                </form>
+                            </div>
+                        <?php endif; ?>
+                    <?php elseif ($group['type'] === 'Thesis Topic' && !empty($group['title'])): ?>
+                        <?php if (!empty($group['status']) && $group['status'] === 'completed'): ?>
+                            <span class="status-label completed-label">Completed</span>
+                            <form method="POST" action="../control/AuthController.php" onsubmit="return confirm('Delete this thesis topic? This will remove its applications.');">
+                                <input type="hidden" name="action" value="teacher_topic_delete">
+                                <input type="hidden" name="topic_id" value="<?= e($group['id'] ?? '') ?>">
+                                <button type="submit" class="apply-btn danger-btn">Delete</button>
+                            </form>
+                        <?php else: ?>
+                            <div style="display:flex;gap:8px;">
+                                <form method="POST" action="../control/AuthController.php" onsubmit="return confirm('Mark this thesis topic as completed?');">
+                                    <input type="hidden" name="action" value="teacher_complete_topic">
+                                    <input type="hidden" name="topic_id" value="<?= e($group['id'] ?? '') ?>">
+                                    <button type="submit" class="apply-btn applied">Complete</button>
+                                </form>
+                                <form method="POST" action="../control/AuthController.php" onsubmit="return confirm('Delete this thesis topic? This will remove its applications.');">
+                                    <input type="hidden" name="action" value="teacher_topic_delete">
+                                    <input type="hidden" name="topic_id" value="<?= e($group['id'] ?? '') ?>">
+                                    <button type="submit" class="apply-btn danger-btn">Delete</button>
+                                </form>
+                            </div>
+                        <?php endif; ?>
+                    <?php endif; ?>
+                </div>
             </article>
         <?php endforeach; ?>
 

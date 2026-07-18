@@ -133,12 +133,36 @@ switch ($action) {
         topicApplicationAction($user);
         break;
 
+    case "teacher_complete_post":
+        teacherCompletePost($user);
+        break;
+
+    case "teacher_complete_topic":
+        teacherCompleteTopic($user);
+        break;
+
+    case "teacher_delete_post":
+        teacherDeletePost($user);
+        break;
+
+    case "teacher_update_post_capacity":
+        teacherUpdatePostCapacity($user);
+        break;
+
     case "teacher_announcement_create":
         teacherAnnouncementCreate($user);
         break;
 
     case "announcement_delete":
         announcementDelete($user);
+        break;
+
+    case "forgot_password":
+        forgotPassword($user);
+        break;
+
+    case "reset_password":
+        resetPassword($user);
         break;
 
     default:
@@ -1125,6 +1149,75 @@ function teacherProfileUpdate($user)
     redirectTeacherProfile('Profile updated successfully.', 'success');
 }
 
+function teacherCompletePost($user)
+{
+    requireTeacherSession();
+
+    $postId = (int) ($_POST['post_id'] ?? 0);
+
+    if (!$postId) {
+        redirectWithTeacherFlash('../view/teacher_my_group.php', 'Invalid post selected.');
+    }
+
+    if (!$user->completeRecruitmentPost($postId, (int) $_SESSION['user']['id'])) {
+        redirectWithTeacherFlash('../view/teacher_my_group.php', 'Could not mark post as completed.');
+    }
+
+    redirectWithTeacherFlash('../view/teacher_my_group.php', 'Post marked as completed.', 'success');
+}
+
+function teacherCompleteTopic($user)
+{
+    requireTeacherSession();
+
+    $topicId = (int) ($_POST['topic_id'] ?? 0);
+
+    if (!$topicId) {
+        redirectWithTeacherFlash('../view/teacher_my_group.php', 'Invalid topic selected.');
+    }
+
+    if (!$user->completeThesisTopic($topicId, (int) $_SESSION['user']['id'])) {
+        redirectWithTeacherFlash('../view/teacher_my_group.php', 'Could not mark topic as completed.');
+    }
+
+    redirectWithTeacherFlash('../view/teacher_my_group.php', 'Topic marked as completed.', 'success');
+}
+
+function teacherDeletePost($user)
+{
+    requireTeacherSession();
+
+    $postId = (int) ($_POST['post_id'] ?? 0);
+
+    if (!$postId) {
+        redirectWithTeacherFlash('../view/teacher_my_group.php', 'Invalid post selected.');
+    }
+
+    if (!$user->deleteRecruitmentPostByTeacher($postId, (int) $_SESSION['user']['id'])) {
+        redirectWithTeacherFlash('../view/teacher_my_group.php', 'Could not delete the post.');
+    }
+
+    redirectWithTeacherFlash('../view/teacher_my_group.php', 'Post deleted successfully.', 'success');
+}
+
+function teacherUpdatePostCapacity($user)
+{
+    requireTeacherSession();
+
+    $postId = (int) ($_POST['post_id'] ?? 0);
+    $membersNeeded = (int) ($_POST['members_needed'] ?? 0);
+
+    if (!$postId || $membersNeeded < 1) {
+        redirectWithTeacherFlash('../view/teacher_recruitment_posts.php', 'Invalid capacity value.');
+    }
+
+    if (!$user->updateRecruitmentPostCapacity($postId, (int) $_SESSION['user']['id'], $membersNeeded)) {
+        redirectWithTeacherFlash('../view/teacher_recruitment_posts.php', 'Could not update group capacity.');
+    }
+
+    redirectWithTeacherFlash('../view/teacher_recruitment_posts.php', 'Group capacity updated successfully.', 'success');
+}
+
 function teacherPasswordUpdate($user)
 {
     requireTeacherSession();
@@ -1164,16 +1257,22 @@ function teacherTopicSave($user)
 
     $teacherUserId = (int) $_SESSION['user']['id'];
     $topicId = (int) ($_POST['topic_id'] ?? 0);
+    $maxMembers = (int) ($_POST['max_members'] ?? 0);
     $data = [
         'title' => trim($_POST['title'] ?? ''),
         'department' => trim($_POST['department'] ?? ''),
         'research_area' => trim($_POST['research_area'] ?? ''),
         'description' => trim($_POST['description'] ?? ''),
-        'status' => in_array($_POST['status'] ?? 'available', ['available', 'assigned'], true) ? $_POST['status'] : 'available'
+        'status' => in_array($_POST['status'] ?? 'available', ['available', 'assigned'], true) ? $_POST['status'] : 'available',
+        'max_members' => $maxMembers
     ];
 
     if ($data['title'] === '' || $data['department'] === '' || $data['research_area'] === '') {
         redirectWithTeacherFlash('../view/teacher_topics.php' . ($topicId ? '?edit=' . $topicId : ''), 'Please fill title, department, and research area.');
+    }
+
+    if ($data['max_members'] < 1) {
+        redirectWithTeacherFlash('../view/teacher_topics.php' . ($topicId ? '?edit=' . $topicId : ''), 'Please enter a valid max members value.');
     }
 
     if (!$user->saveThesisTopic($teacherUserId, $data, $topicId)) {
@@ -1313,4 +1412,132 @@ function announcementDelete($user)
     }
 
     redirectWithTeacherFlash($redirect, 'Announcement deleted successfully.', 'success');
+}
+
+/* ===========================================================
+                    FORGOT PASSWORD
+=========================================================== */
+
+function forgotPassword($user)
+{
+    $email = trim($_POST['email'] ?? '');
+
+    if (empty($email)) {
+        echo json_encode([
+            "status" => "error",
+            "message" => "Please enter your email address."
+        ]);
+        exit;
+    }
+
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode([
+            "status" => "error",
+            "message" => "Invalid email address."
+        ]);
+        exit;
+    }
+
+    // Check if email exists
+    if (!$user->emailExists($email)) {
+        // Don't reveal if email exists or not for security
+        echo json_encode([
+            "status" => "success",
+            "message" => "If an account exists with this email, you will receive a password reset link shortly."
+        ]);
+        exit;
+    }
+
+    // Generate password reset token
+    try {
+        $user->createPasswordResetTable();
+        $resetToken = $user->generatePasswordResetToken($email);
+
+        if (!$resetToken) {
+            throw new Exception("Failed to generate reset token.");
+        }
+
+        // Create reset link
+        $baseUrl = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'];
+        $resetLink = $baseUrl . '/Thesis-Connect/view/reset_password.php?token=' . urlencode($resetToken);
+
+        // Send email
+        $subject = 'Reset Your Password - ThesisConnect';
+        $message = "Hello,\n\n";
+        $message .= "Click the link below to reset your password:\n\n";
+        $message .= $resetLink . "\n\n";
+        $message .= "This link will expire in 24 hours.\n\n";
+        $message .= "If you didn't request this, please ignore this email.\n\n";
+        $message .= "Best regards,\nThesisConnect Team";
+        
+        $headers = "From: noreply@thesisconnect.com\r\n";
+        $headers .= "Reply-To: support@thesisconnect.com\r\n";
+        $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+
+        // Send email - wrap in try-catch in case mail() fails
+        @mail($email, $subject, $message, $headers);
+
+        echo json_encode([
+            "status" => "success",
+            "message" => "Password reset link has been sent to your email address.",
+            "resetLink" => $resetLink  // Remove this in production, only for development/testing
+        ]);
+        exit;
+    } catch (Exception $e) {
+        echo json_encode([
+            "status" => "error",
+            "message" => "An error occurred: " . $e->getMessage()
+        ]);
+        exit;
+    }
+}
+
+/* ===========================================================
+                    RESET PASSWORD
+=========================================================== */
+
+function resetPassword($user)
+{
+    $token = trim($_POST['token'] ?? '');
+    $newPassword = $_POST['new_password'] ?? '';
+    $confirmPassword = $_POST['confirm_password'] ?? '';
+
+    if (empty($token) || empty($newPassword) || empty($confirmPassword)) {
+        echo json_encode([
+            "status" => "error",
+            "message" => "Please fill all required fields."
+        ]);
+        exit;
+    }
+
+    if (strlen($newPassword) < 8) {
+        echo json_encode([
+            "status" => "error",
+            "message" => "Password must be at least 8 characters."
+        ]);
+        exit;
+    }
+
+    if ($newPassword !== $confirmPassword) {
+        echo json_encode([
+            "status" => "error",
+            "message" => "Passwords do not match."
+        ]);
+        exit;
+    }
+
+    // Validate and reset password
+    if (!$user->resetPasswordWithToken($token, $newPassword)) {
+        echo json_encode([
+            "status" => "error",
+            "message" => "Invalid or expired reset link. Please try again."
+        ]);
+        exit;
+    }
+
+    echo json_encode([
+        "status" => "success",
+        "message" => "Password has been reset successfully. You can now login with your new password."
+    ]);
+    exit;
 }
